@@ -38,7 +38,7 @@ let switchOnDuration = 4; // minimum 1, maximum 24
 // the time window will go over midnight if end hour is less than start hour
 // e. g. start hour of 20 and end hour of 4 sets window from 20:00 to 4:00 on the following day
 // set both values to 0 to match the calendar day
-// both values MUST be whole numbers from 0 to 23 - anything else will cause the script to loop!
+// both values MUST be whole numbers from 0 to 23
 let timeWindowStartHour = 7; // minimum 0, maximum 23
 let timeWindowEndHour = 19; // minimum 0, maximum 23
 
@@ -82,13 +82,13 @@ function switchOnPower() {
     { id: 0, on: true },
     function (result, error_code, error_message) {
       if (error_code !== 0) {
-        logAndNotify("Stromzufuhr konnte nicht eingeschaltet werden.", sendPowerOn);
+        logAndNotify(
+          "Stromzufuhr konnte nicht eingeschaltet werden.",
+          sendPowerOn
+        );
         return;
       }
-      logAndNotify(
-        "Die Stromzufuhr wurde eingeschaltet.",
-        sendPowerOn
-      );
+      logAndNotify("Die Stromzufuhr wurde eingeschaltet.", sendPowerOn);
     }
   );
 }
@@ -99,20 +99,23 @@ function switchOffPower() {
     { id: 0, on: false },
     function (result, error_code, error_message) {
       if (error_code !== 0) {
-        logAndNotify("Stromzufuhr konnte nicht ausgeschaltet werden.", sendPowerOff);
+        logAndNotify(
+          "Stromzufuhr konnte nicht ausgeschaltet werden.",
+          sendPowerOff
+        );
         return;
       }
-      logAndNotify(
-        "Die Stromzufuhr wurde ausgeschaltet.",
-        sendPowerOff
-      );
+      logAndNotify("Die Stromzufuhr wurde ausgeschaltet.", sendPowerOff);
     }
   );
 }
 
 function findHour(start, hour) {
   let timestamp = start - (start % 3600000) + 3600000;
-  while (new Date(timestamp).getHours() != hour) {
+  for (let i = 0; i < 25; i++) {
+    if (new Date(timestamp).getHours() === hour) {
+      break;
+    }
     timestamp += 3600000;
   }
   return timestamp;
