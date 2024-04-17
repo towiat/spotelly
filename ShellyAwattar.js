@@ -174,6 +174,18 @@ function awattar() {
   let start = findHour(Date.now(), timeWindowStartHour);
   let end = findHour(start, timeWindowEndHour);
 
+  let runData = {
+    scheduleTimeSpec: scheduleTimeSpec,
+    switchOnDuration: switchOnDuration,
+    timeWindowStartHour: timeWindowStartHour,
+    timeWindowEndHour: timeWindowEndHour,
+    systemTime: Date.now(),
+    calculatedStart: start,
+    calculatedEnd: end,
+  };
+
+  print(JSON.stringify(runData));
+
   let baseURL = "https://api.awattar." + awattarCountry;
   Shelly.call(
     "http.get",
