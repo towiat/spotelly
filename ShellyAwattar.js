@@ -13,6 +13,9 @@ With the above settings, every day at 15:00, the script fetches the EPEX spot pr
 cheapest 4 hour block between 7:00 and 19:00 on the next day. It then sets timers to activate power
 output at the start of this period and deactivate it at the end.
 
+The calculated times for switching power on and off are stored in the Key-Value Store of the device and
+can be reviewed by opening the URL http://IPAddressOfTheDevice/#/key-value-store.
+
 Optionally, the script can also send telegram messages to keep you informed about its activities.
 
 This script was inspired by https://elspotcontrol.netlify.app/find_cheapest.js which offers a similar
@@ -26,8 +29,6 @@ let awattarCountry = "at"; // at for Austrian or de for German API
 
 // defines the schedule for running the script - defaults to 15:00 every day
 // see https://github.com/mongoose-os-libs/cron for a description on how to set this
-// note: when you change this setting after the script has run at least once, you have to
-// delete the "Awattar eval" schedule in the Shelly Web UI and then stop and restart the script
 let scheduleTimeSpec = "0 0 15 * * *";
 
 // this sets the number of hours that the device will be switched on in one go (no decimals allowed)
@@ -154,15 +155,20 @@ function setSchedule(response) {
       lowestSum = sliceSum;
     }
   }
-  logAndNotify(
+
+  let message =
     "Die Stromzufuhr wird " +
-      formatDate(switchOn) +
-      " ein- und " +
-      formatDate(switchOff) +
-      " ausgeschaltet. Der durchschnittliche Marktpreis ist " +
-      Math.round((lowestSum / 10 / switchOnDuration) * 100) / 100 +
-      " cent/kWh.",
-    sendSchedule
+    formatDate(switchOn) +
+    " ein- und " +
+    formatDate(switchOff) +
+    " ausgeschaltet. Der durchschnittliche Marktpreis ist " +
+    Math.round((lowestSum / 10 / switchOnDuration) * 100) / 100 +
+    " cent/kWh.";
+
+  logAndNotify(message, sendSchedule);
+  saveKeyInKVS(
+    "Awattar-Plan-" + JSON.stringify(Shelly.getCurrentScriptId()),
+    message
   );
 
   let now = Date.now();
@@ -174,17 +180,17 @@ function awattar() {
   let start = findHour(Date.now(), timeWindowStartHour);
   let end = findHour(start, timeWindowEndHour);
 
-  let runData = {
-    scheduleTimeSpec: scheduleTimeSpec,
-    switchOnDuration: switchOnDuration,
-    timeWindowStartHour: timeWindowStartHour,
-    timeWindowEndHour: timeWindowEndHour,
-    systemTime: Date.now(),
-    calculatedStart: start,
-    calculatedEnd: end,
-  };
-
-  print(JSON.stringify(runData));
+  print(
+    JSON.stringify({
+      scheduleTimeSpec: scheduleTimeSpec,
+      switchOnDuration: switchOnDuration,
+      timeWindowStartHour: timeWindowStartHour,
+      timeWindowEndHour: timeWindowEndHour,
+      systemTime: Date.now(),
+      calculatedStart: start,
+      calculatedEnd: end,
+    })
+  );
 
   let baseURL = "https://api.awattar." + awattarCountry;
   Shelly.call(
@@ -208,28 +214,36 @@ function registerIfNotRegistered() {
     },
     function (result, error_code, error_message) {
       if (error_code !== 0) {
-        installSchedule();
+        createSchedule();
         return;
       }
       let scheduleID = result.value;
       Shelly.call("Schedule.List", {}, function (result) {
         for (let i = 0; i < result.jobs.length; i++) {
-          if (result.jobs[i].id === scheduleID) return;
+          if (result.jobs[i].id === scheduleID) {
+            if (result.jobs[i].timespec !== scheduleTimeSpec) {
+              Shelly.call("Schedule.Delete", { id: scheduleID });
+              print("Timespec has changed.");
+              break;
+            } else {
+              return;
+            }
+          }
         }
-        installSchedule();
+        createSchedule();
       });
     }
   );
 }
 
-function saveScheduleIDInKVS(scheduleId) {
+function saveKeyInKVS(key, value) {
   Shelly.call("KVS.Set", {
-    key: kvsKey,
-    value: scheduleId,
+    key: key,
+    value: value,
   });
 }
 
-function installSchedule() {
+function createSchedule() {
   Shelly.call(
     "Schedule.Create",
     {
@@ -246,7 +260,7 @@ function installSchedule() {
       ],
     },
     function (result) {
-      saveScheduleIDInKVS(result.id);
+      saveKeyInKVS(kvsKey, result.id);
     }
   );
 }
