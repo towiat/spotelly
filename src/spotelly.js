@@ -1,114 +1,57 @@
-/*
-This script uses EPEX spot hourly energy prices for the Austrian or German market (provided by the Awattar
-API) to control the power output of a Shelly device. It has been developed and tested on a
-Shelly Plus Plug S with firmware version 1.2.3. No warranties given - use at your own risk.
-
-The goal is to activate power output when prices are at their lowest during a predefined daily time
-window. The script can be customized by setting several variables and works as follows:
-
-You define a schedule, (e. g. 15:00 every day), a switch on period (e.g. 4 hours) and a time window
-(e.g. 7:00 to 19:00).
-
-With the above settings, every day at 15:00, the script fetches the EPEX spot prices and finds the
-cheapest 4 hour block between 7:00 and 19:00 on the next day. It then sets timers to activate power
-output at the start of this period and deactivate it at the end.
-
-The calculated times for switching power on and off are stored in the Key-Value Store of the device and
-can be reviewed by opening the URL http://IPAddressOfTheDevice/#/key-value-store.
-
-Optionally, the script can also send telegram messages to keep you informed about its activities.
-
-This script was inspired by https://elspotcontrol.netlify.app/find_cheapest.js which offers a similar
-solution for the Finnish market.
-*/
+// Spotelly Version 1.0
+// This script uses EPEX spot hourly energy prices to control the power output of a Shelly device.
+// See https://github.com/towiat/spotelly for the full documentation.
 
 // <<<<< START OF CONFIGURATION - change values below to your preference >>>>>
 
-// defines whether the Austrian or German Awattar API will be used
-let awattarCountry = "at"; // at for Austrian or de for German API
+const awattarCountry = "at"; // at for Austrian or de for German API
 
-// defines the schedule for running the script - defaults to 15:00 every day
-// see https://github.com/mongoose-os-libs/cron for a description on how to set this
-let scheduleTimeSpec = "0 0 15 * * *";
+const scheduleTimeSpec = "0 0 15 * * *"; // the schedule for the script execution
 
-// this sets the number of hours that the device will be switched on in one go (no decimals allowed)
-let switchOnDuration = 4; // minimum 1, maximum 24
+const switchOnDuration = 4; // minimum 1, maximum 24
+const timeWindowStartHour = 7; // minimum 0, maximum 23
+const timeWindowEndHour = 19; // minimum 0, maximum 23
+const priceLimit = Infinity; // in cent/kWh
 
-// these two variables set the time window within which the lowest prices will be found
-// e. g. start hour 7 and end hour 19 for a time window from 7:00 to 19:00
-// the time window will go over midnight if end hour is less than start hour
-// e. g. start hour of 20 and end hour of 4 sets window from 20:00 to 4:00 on the following day
-// set both values to 0 to match the calendar day
-// both values MUST be whole numbers from 0 to 23
-let timeWindowStartHour = 7; // minimum 0, maximum 23
-let timeWindowEndHour = 19; // minimum 0, maximum 23
+const telegramActive = false; // set to true to activate the Telegram feature
 
-// if true, telegram messages will be sent for certain events
-let telegramActive = false;
-
-// Token and ChatID must be set if telegramActive is true
-let telegramToken = "";
-let telegramChatID = "";
-let deviceName = "Shelly Plug"; // will be included in the message to identify the sender
-
-// these settings determine which messages will be sent by the script
-// they have no effect if telegramActive is false
-let sendSchedule = true; // after each execution, send telegram with timing and price details
-let sendPowerOn = true; // send telegram when power has been switched on by this script
-let sendPowerOff = true; // send telegram when power has been switched off by this script
+// the following settings have no effect when telegramActive is false
+const telegramToken = ""; // must be set when telegramActive is true
+const telegramChatID = ""; // must be set when telegramActive is true
+const deviceName = "Shelly"; // will be included in telegrams to identify the sender
+const sendSchedule = true; // send telegram with schedule and price details after each run
+const sendPowerOn = true; // send telegram when power has been switched on by this script
+const sendPowerOff = true; // send telegram when power has been switched off by this script
 
 // <<<<< END OF CONFIGURATION - no changes needed below this line >>>>>
 
-let kvsKey = "Awattar-Schedule-" + JSON.stringify(Shelly.getCurrentScriptId());
+const scriptID = Shelly.getCurrentScriptId();
+const kvsPlanKey = "Awattar-Plan-" + JSON.stringify(scriptID);
 
-function sendTelegramMessage(msg) {
-  let message = deviceName + ": " + msg;
-  Shelly.call("http.post", {
-    url: "https://api.telegram.org/bot" + telegramToken + "/sendMessage",
-    header: { content_type: "application/json" },
-    body: { chat_id: telegramChatID, text: message },
-  });
-}
-
-function logAndNotify(msg, notify) {
+function logAndNotify(msg, sendTelegram, kvsKey) {
   print(msg);
-  if (telegramActive && notify) {
-    sendTelegramMessage(msg);
+  if (typeof kvsKey !== "undefined") {
+    Shelly.call("KVS.Set", { key: kvsKey, value: msg });
+  }
+  if (telegramActive && sendTelegram) {
+    Shelly.call("http.post", {
+      url: "https://api.telegram.org/bot" + telegramToken + "/sendMessage",
+      header: { content_type: "application/json" },
+      body: { chat_id: telegramChatID, text: deviceName + ": " + msg },
+    });
   }
 }
 
-function switchOnPower() {
-  Shelly.call(
-    "Switch.Set",
-    { id: 0, on: true },
-    function (result, error_code, error_message) {
-      if (error_code !== 0) {
-        logAndNotify(
-          "Stromzufuhr konnte nicht eingeschaltet werden.",
-          sendPowerOn
-        );
-        return;
-      }
-      logAndNotify("Die Stromzufuhr wurde eingeschaltet.", sendPowerOn);
+function setPowerSwitch(value) {
+  const switchText = value ? "eingeschaltet" : "ausgeschaltet";
+  const messageFlag = value ? sendPowerOn : sendPowerOff;
+  Shelly.call("Switch.Set", { id: 0, on: value }, function (result, error_code) {
+    if (error_code !== 0) {
+      logAndNotify("Die Stromzufuhr konnte nicht " + switchText + " werden.", messageFlag);
+    } else {
+      logAndNotify("Die Stromzufuhr wurde " + switchText + ".", messageFlag);
     }
-  );
-}
-
-function switchOffPower() {
-  Shelly.call(
-    "Switch.Set",
-    { id: 0, on: false },
-    function (result, error_code, error_message) {
-      if (error_code !== 0) {
-        logAndNotify(
-          "Stromzufuhr konnte nicht ausgeschaltet werden.",
-          sendPowerOff
-        );
-        return;
-      }
-      logAndNotify("Die Stromzufuhr wurde ausgeschaltet.", sendPowerOff);
-    }
-  );
+  });
 }
 
 function findHour(start, hour) {
@@ -123,7 +66,7 @@ function findHour(start, hour) {
 }
 
 function formatDate(timestamp) {
-  let date = new Date(timestamp);
+  const date = new Date(timestamp);
   return [
     "am ",
     date.getDate(),
@@ -137,13 +80,14 @@ function formatDate(timestamp) {
   ].join("");
 }
 
-function setSchedule(response) {
-  prices = JSON.parse(response.body)["data"];
+function setTimers(response) {
+  const prices = JSON.parse(response.body).data;
 
   let switchOn = 0;
   let switchOff = 0;
-  let lowestSum = 999999999;
+  let lowestSum = Infinity;
   for (let i = 0, j = switchOnDuration; j <= prices.length; i++, j++) {
+    // eslint-disable-next-line prefer-const
     let slice = prices.slice(i, j);
     let sliceSum = 0;
     slice.forEach(function (ele) {
@@ -156,29 +100,40 @@ function setSchedule(response) {
     }
   }
 
-  let message =
-    "Die Stromzufuhr wird " +
-    formatDate(switchOn) +
-    " ein- und " +
-    formatDate(switchOff) +
-    " ausgeschaltet. Der durchschnittliche Marktpreis ist " +
-    Math.round((lowestSum / 10 / switchOnDuration) * 100) / 100 +
-    " cent/kWh.";
+  const centPerKWH = lowestSum / 10 / switchOnDuration;
 
-  logAndNotify(message, sendSchedule);
-  saveKeyInKVS(
-    "Awattar-Plan-" + JSON.stringify(Shelly.getCurrentScriptId()),
-    message
-  );
+  if (centPerKWH > priceLimit) {
+    const message = [
+      "Der günstigste Durchschnittspreis beträgt",
+      centPerKWH.toFixed(2),
+      "cent/kWh und liegt über dem Schwellenwert von",
+      priceLimit.toFixed(2),
+      "cent/kWh. Die Stromzufuhr wird im aktuellen Zeitfenster nicht eingeschaltet.",
+    ].join(" ");
+    logAndNotify(message, sendSchedule, kvsPlanKey);
+    return;
+  }
 
-  let now = Date.now();
-  Timer.set(switchOn - now, false, switchOnPower);
-  Timer.set(switchOff - now, false, switchOffPower);
+  const message = [
+    "Die Stromzufuhr wird",
+    formatDate(switchOn),
+    "ein- und",
+    formatDate(switchOff),
+    "ausgeschaltet. Der durchschnittliche Marktpreis ist",
+    centPerKWH.toFixed(2),
+    "cent/kWh.",
+  ].join(" ");
+  logAndNotify(message, sendSchedule, kvsPlanKey);
+
+  const now = Date.now();
+  Timer.set(switchOn - now, false, setPowerSwitch, true);
+  Timer.set(switchOff - now, false, setPowerSwitch, false);
 }
 
-function awattar() {
-  let start = findHour(Date.now(), timeWindowStartHour);
-  let end = findHour(start, timeWindowEndHour);
+// eslint-disable-next-line no-unused-vars
+function calculate() {
+  const start = findHour(Date.now(), timeWindowStartHour);
+  const end = findHour(start, timeWindowEndHour);
 
   print(
     JSON.stringify({
@@ -189,80 +144,52 @@ function awattar() {
       systemTime: Date.now(),
       calculatedStart: start,
       calculatedEnd: end,
-    })
+    }),
   );
 
-  let baseURL = "https://api.awattar." + awattarCountry;
   Shelly.call(
     "http.get",
     {
-      url: baseURL + "/v1/marketdata?start=" + start + "&end=" + end,
+      url:
+        "https://api.awattar." + awattarCountry + "/v1/marketdata?start=" + start + "&end=" + end,
     },
-    setSchedule
+    setTimers,
   );
 }
 
-// The following logic was adapted from the https://github.com/ALLTERCO/shelly-script-examples
-// repository and used under the terms of the the Apache 2.0 license:
-// https://github.com/ALLTERCO/shelly-script-examples/blob/main/LICENSE
+function createOrUpdateSchedule() {
+  Shelly.call("Schedule.List", {}, function (result) {
+    let scheduleMethod = "Schedule.Update";
+    let scheduleObject = null;
+    const code = "calculate()";
 
-function registerIfNotRegistered() {
-  Shelly.call(
-    "KVS.Get",
-    {
-      key: kvsKey,
-    },
-    function (result, error_code, error_message) {
-      if (error_code !== 0) {
-        createSchedule();
-        return;
+    for (const job of result.jobs) {
+      const call = job.calls[0];
+      if (!(call.method.toLowerCase() === "script.eval" && call.params.id === scriptID)) {
+        continue; // this is not our schedule - skip
       }
-      let scheduleID = result.value;
-      Shelly.call("Schedule.List", {}, function (result) {
-        for (let i = 0; i < result.jobs.length; i++) {
-          if (result.jobs[i].id === scheduleID) {
-            if (result.jobs[i].timespec !== scheduleTimeSpec) {
-              Shelly.call("Schedule.Delete", { id: scheduleID });
-              print("Timespec has changed.");
-              break;
-            } else {
-              return;
-            }
-          }
-        }
-        createSchedule();
-      });
+      if (job.timespec === scheduleTimeSpec && call.params.code === code) {
+        return; // this IS our schedule and it matches the configuration - we are done
+      }
+      print("Schedule has changed.");
+      scheduleObject = job;
+      scheduleObject.timespec = scheduleTimeSpec;
+      call.params.code = code;
+      break;
     }
-  );
-}
 
-function saveKeyInKVS(key, value) {
-  Shelly.call("KVS.Set", {
-    key: key,
-    value: value,
+    if (scheduleObject === null) {
+      // schedule does not exist - create it
+      scheduleMethod = "Schedule.Create";
+      scheduleObject = {
+        enable: true,
+        timespec: scheduleTimeSpec,
+        calls: [{ method: "Script.Eval", params: { id: scriptID, code: code } }],
+      };
+    }
+
+    Shelly.call(scheduleMethod, scheduleObject);
   });
 }
 
-function createSchedule() {
-  Shelly.call(
-    "Schedule.Create",
-    {
-      enable: true,
-      timespec: scheduleTimeSpec,
-      calls: [
-        {
-          method: "script.eval",
-          params: {
-            id: Shelly.getCurrentScriptId(),
-            code: "awattar()",
-          },
-        },
-      ],
-    },
-    function (result) {
-      saveKeyInKVS(kvsKey, result.id);
-    }
-  );
-}
-
-registerIfNotRegistered();
+createOrUpdateSchedule();
