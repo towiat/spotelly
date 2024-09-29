@@ -20,7 +20,7 @@ it at the end.
 
 After each execution, the script writes the calculated switch times to the Key-Value Store of the Shelly where
 they can be reviewed:
-![KVS Message](./images/KVSMessage.png)
+![KVS Message](https://raw.githubusercontent.com/towiat/spotelly/main/images/KVSScreen.png)
 
 There are two additional features:
 
