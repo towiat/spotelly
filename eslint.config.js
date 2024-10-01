@@ -10,7 +10,6 @@ export default [
       "no-unused-vars": "error",
       "no-use-before-define": "error",
       "no-var": "error",
-      "prefer-const": "error",
     },
   },
   {
