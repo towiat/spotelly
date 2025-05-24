@@ -7,9 +7,12 @@
 
 let epexBZN = "AT"; // EPEX Bidding Zone - see documentation for valid codes
 
-let switchOnDuration = 4; // minimum 1, maximum 24
-let timeWindowStartHour = 7; // minimum 0, maximum 23
-let timeWindowEndHour = 19; // minimum 0, maximum 23
+// Define multiple time windows as objects in an array
+let timeWindows = [
+  { startHour: 0, endHour: 6, duration: 2 },   // Window 1
+  { startHour: 11, endHour: 18, duration: 2 },  // Window 2
+];
+
 let blockMode = true; // set calculation mode
 let priceLimit = Infinity; // in cent/kWh
 let useFallback = true; // if true, use fallback when price retrieval fails
@@ -37,7 +40,7 @@ let hrs = [];
 let anch = 0;
 let rOff = Math.ceil(Math.random() * 300000);
 let timH = undefined;
-let html = atob("{{ html }}"); // placeholder for compressed html - used by build script
+let html = atob("H4sIAAAAAAACA4UUh5bjJvBXCGlSjGT7+tlCm95zvXcM4xVZBHowbs9P/x6QtenJucD0PlQfKCfx0AFpsDV1lU6iBIpiFQpsoAWuhL+oqxZQECsivtWw65xHIp1FsMjpTitsuIKtllAMCNNWoxamCFIY4HNaV0bbC9J4WPMGsQuL6VQqW/4aFBi99aUFnNquna6cw4BedJ9fL6+WV6dKB5zKEP5glK22ZaQQD4YHPBgIDQDWFWo0UD/sHIIxh2p6wquVUwcijQiBU1WsDexJOgrpzKa1BGGPhQSL4GlMU2h7KTxInXu3K+akxeIqaVfF9SiDYmXgUuiEDGexcl6BBzWiMVrdRWxXiA060u6HOxloQCiiFW8inMJL8KqOESe9eKco6mrtHIK/dLQ6LzqvW+EPZK33oKI3RNfSpLuuqyCjM6wNINnwnbbK7UrjpEDtbJnKXnrojJCQ0TBWiDKaOk1zJnmGDHJeKyc3LVgszwG/MZDALw8/qAzzUlsL/vtHv/zMgWmOvLawI18LhMRE97NLnX6IXtvz6GJL2VFF5sPUnwUNjfNIGer2ktKC0puW9jlrOfD6KDPaUPauQp/qQ6QzoROWX6vvuR14cneD3QbJo2jgVPG18+ThTqNsyEdHKEM/atYppHR/7zY+3RKnF0+bBN217/JlKpDhM+biX3BKl3qdQYmlAXuOTX5MfORQiuVWeGJZYA1P/FZ0WUp6YwznHF/OXp/dEXcWCciZ4r8IbKLMPivLssmZHwnangjLGG72Mlp77dYkmsuPoyH7ySeZ5dFSzkIE3YRbZiaTfPDe8nfDfHMay+H8gjTBZB8ddYjymcrP6IyR2ceMzGezj+lifmX2WTYvMlv4fJqpeOYTemIycj1K9PmSvluKCR+rrGLl2r6OBlMLg9ESshmbz/L+33nzOZvf+IM5DuawP2BVlLUlum/TbGZXBrG6Uno7isUCtEUYGlZX2sZm/pkhG5AXxYmcXiM+EFZuHz2FMzpgoOiC0p44+1UM54JTjLXAnhFsdChHkZzG9Yle63cMJ/zqDbje92ACEMHpmPUfszVG0BXX6zuODLuwjHO4okzkLALrOJAPwYBEUIsYielJmqrAyBdb8OIcEjEzZ25qFrP8z8mTcepWvr4T60Med9F6FH830RmUNs/7pQgHK8l6Y2VaUWKy/LiGWJ1sEy01YNO0YXwfnc3yPyhthlH5NKTjzl6qsWML2Di1oPfuPnxEWXpYFj8+vHunDMNW6vUhO2JYIHN2AX3ev9dPKUWyHNFTVf63gnSCKa3x6XHWOKG4qabjw/QbcaHw7mkGAAA="); // placeholder for compressed html - used by build script
 
 function next() {
   let delay = Timer.getInfo(timH).next - Shelly.getUptimeMs();
@@ -143,52 +146,55 @@ function prcP(res, errc, errm, day) {
     }
   }
 
+  
   if (anch === 0) anch = day.strt;
 
-  let winS = timeWindowStartHour === 0 ? day.strt : getH(day.strt, timeWindowStartHour);
-  let winE = getH(winS, timeWindowEndHour);
-  let winH = (winE - winS) / 3600000;
-  let dur = Math.min(switchOnDuration, winH);
+  // Loop through each time window
+  for (let win of timeWindows) {
+    let winS = win.startHour === 0 ? day.strt : getH(day.strt, win.startHour);
+    let winE = getH(winS, win.endHour);
+    let winH = (winE - winS) / 3600000;
+    let dur = Math.min(win.duration, winH);
 
-  let data = [];
-  let idx = getIndex(winS);
-  hrs.slice(idx, idx + winH).forEach(function (ele) {
-    data.push([winS, ele[0], ele[1]]);
-    winS += 3600000;
-  });
+    let data = [];
+    let idx = getIndex(winS);
+    hrs.slice(idx, idx + winH).forEach(function (ele) {
+      data.push([winS, ele[0], ele[1]]);
+      winS += 3600000;
+    });
 
-  let sidx = 0;
-  if (blockMode) {
-    let lSum = Infinity;
-    for (let i = 0, j = dur; j <= data.length; i++, j++) {
-      let sSum = 0;
-      data.slice(i, j).forEach(function (ele) {
-        sSum += ele[1];
-      });
-      if (sSum < lSum) {
-        sidx = i;
-        lSum = sSum;
-      }
-    }
-  } else {
-    // move the <duration> elements with the lowest price to the end of the data array
-    for (let i = 0; i < dur; i++) {
-      for (let j = 1; j < data.length; j++) {
-        if (data[j][1] > data[j - 1][1]) {
-          let temp = data[j];
-          data[j] = data[j - 1];
-          data[j - 1] = temp;
+    let sidx = 0;
+    if (blockMode) {
+      let lSum = Infinity;
+      for (let i = 0, j = dur; j <= data.length; i++, j++) {
+        let sSum = 0;
+        data.slice(i, j).forEach(function (ele) {
+          sSum += ele[1];
+        });
+        if (sSum < lSum) {
+          sidx = i;
+          lSum = sSum;
         }
       }
-    }
-    sidx = -dur;
-  }
-
-  for (let ele of data.splice(sidx, dur)) {
-    if (fbm) {
-      updS(ele[0], true);
     } else {
-      if (ele[1] <= priceLimit) updS(ele[0], true);
+      for (let i = 0; i < dur; i++) {
+        for (let j = 1; j < data.length; j++) {
+          if (data[j][1] > data[j - 1][1]) {
+            let temp = data[j];
+            data[j] = data[j - 1];
+            data[j - 1] = temp;
+          }
+        }
+      }
+      sidx = -dur;
+    }
+
+    for (let ele of data.splice(sidx, dur)) {
+      if (fbm) {
+        updS(ele[0], true);
+      } else {
+        if (ele[1] <= priceLimit) updS(ele[0], true);
+      }
     }
   }
 
