@@ -1,0 +1,123 @@
+<!doctype html>
+<html data-bs-theme="dark">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <title>Spotelly</title>
+  </head>
+
+  <body class="text-center">
+    <main class="pt-4 pb-5">
+      <table class="table table-bordered table-striped w-auto mx-auto">
+        <thead id="h">
+          <tr>
+            <th colspan="4">
+              Timetable for Switch
+              <select style="display: inline-block; margin-left: 8px" id="s"></select>
+            </th>
+          </tr>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>ct/kWh</th>
+            <th>On</th>
+          </tr>
+        </thead>
+        <tbody id="b" />
+      </table>
+    </main>
+
+    <footer class="bg-primary fixed-bottom" id="f" />
+    <script>
+      let data = null;
+      let switchID = Number(new URLSearchParams(window.location.search).get("id")) || 0;
+      const formatDate = ts =>
+        new Date(ts).toLocaleString("sv", {
+          timeZone: data.z,
+          dateStyle: "short",
+          timeStyle: "medium",
+        });
+      const body = document.getElementById("b");
+      const footer = document.getElementById("f");
+      const switchDropdown = document.getElementById("s");
+
+      switchDropdown.addEventListener("change", e => {
+        switchID = Number(e.target.value);
+        main();
+      });
+
+      body.addEventListener("change", e =>
+        callDataEndpoint(switchID, Number(e.target.closest("tr").id), e.target.checked),
+      );
+
+      function main() {
+        if (!data.v) {
+          body.innerHTML = `<tr><td colspan=4 class=p-5><a href="${window.location.href.replace("spotelly", "config")}" target="_blank">Open Configuration</a>`;
+          return;
+        }
+        switchDropdown.innerHTML = "";
+        for (const j in data.o) if (data.o[j]) switchDropdown.innerHTML += `<option>${j}</option>`;
+        switchDropdown.value = switchID || 0;
+        let count = 0;
+        let sum = 0;
+        let prices = null;
+
+        if (data.a) {
+          body.innerHTML = "";
+          let timestamp = data.a;
+          if (!prices) prices = data.p.map(x => Number(x) / 100);
+          const max = Math.max(...prices);
+          const min = Math.min(...prices);
+
+          prices.forEach((price, idx) => {
+            const on = data.o[switchID][idx] === "1" ? true : false;
+
+            if (on) {
+              sum += price;
+              count++;
+            }
+
+            const color = isNaN(max)
+              ? "0, 0%, 100%"
+              : `${(1 - (price - min) / (max - min)) * 120}, 100%, 50%`;
+            const style = `style="color: hsl(${color});"`;
+            body.innerHTML += `<tr id=${timestamp}><td ${style}>${formatDate(timestamp).slice(0, 10)}<td ${style}>${formatDate(timestamp).slice(11, 16)}<td ${style} class=text-end>${price.toFixed(2)} <td><div class=form-switch><input class=form-check-input type=checkbox ${on ? "checked" : ""}></div>`;
+            timestamp += data.i;
+          });
+        } else {
+          body.innerHTML = "<tr><td colspan=4 class=p-5>No data";
+        }
+
+        const now = new Date();
+        const next = data.n
+          ? data.n
+          : new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate() + (now.getHours() >= 15),
+              15,
+            ).getTime() + data.r;
+
+        footer.innerHTML = `${count} selected, Average: ${(count ? sum / count : 0).toFixed(2)} ct/kWh<br>Next Update: ${formatDate(next)}`;
+      }
+
+      const callDataEndpoint = (s, h, o) => {
+        fetch(
+          window.location.href.replace("spotelly", "data"),
+          h ? { method: "POST", body: JSON.stringify({ s, h, o }) } : { method: "GET" },
+        )
+          .then(r => r.json())
+          .then(r => {
+            data = r;
+            main();
+          })
+          .catch(e => (body.innerHTML = `<tr><td colspan=4 class=p-5>${e}`));
+      };
+
+      window.addEventListener("load", () => callDataEndpoint());
+    </script>
+  </body>
+</html>

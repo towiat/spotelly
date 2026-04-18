@@ -37,8 +37,6 @@ There are some additional features:
   of any of the cheapest hours exceeds this limit, power output will not be activated for this hour.
 - You can define a custom formula to convert the EPEX spot price to the price that is charged to
   you by your electricity provider.
-- Telegram integration: Optionally, the script can send you Telegram messages whenever the timetable
-  has been updated and when power has been switched on or off by this script.
 - For multi-switch devices like the Shelly 2PM or 3PM, you can define which of the switches should
   be controlled by the script.
 
@@ -213,38 +211,6 @@ When set to `false`, the script turns the switch ON for the selected (cheapest) 
 the remaining hours.<br>
 When set to `true`, the script turns the switch OFF for the selected (cheapest) hours and ON for
 the remaining hours.
-
-### telegramActive (default `false`)
-
-Set this to `true` to activate the Telegram feature. In order to use this feature, you need to have
-Telegram installed. You also need a Telegram token and a Telegram ChatID. A description on how to
-obtain both can be found here:
-<a href="https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a" target="_blank"> How to
-get Telegram Bot Chat ID</a>.
-
-The following variables are only used when telegramActive is `true`:
-
-#### telegramToken & telegramChatID (default `""` and `""`)
-
-Both variables MUST be filled when telegramActive is true - otherwise, the feature will not work.
-
-#### deviceName (default `Shelly`)
-
-The value of this variable is included in the Telegram message in order to identify the sender.
-Especially useful when you run the script on several Shellies and want to know which one sent which
-message.
-
-#### sendSchedule (default `true`)
-
-If true, the script sends a Telegram message whenever a calculation run has finished successfully.
-
-#### sendPowerOn (default `true`)
-
-If true, the script sends a Telegram message when power output is switched on by the script.
-
-#### sendPowerOff (default `true`)
-
-If true, the script sends a Telegram message when power output is switched off by the script.
 
 ## FAQ
 

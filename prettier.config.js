@@ -7,7 +7,7 @@ export default {
     {
       files: ["./src/*.html"],
       options: {
-        printWidth: 999,
+        printWidth: 100,
       },
     },
   ],

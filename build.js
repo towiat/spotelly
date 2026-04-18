@@ -1,54 +1,74 @@
 /*
-This build script inserts a compressed version of endpoint.html into the spotelly.js source file
-and writes the resulting code to the ./dist folder. This is done to reduce RAM consumption on
-the Shelly.
+This script merges spotelly.js, timetable.html and config.html into one single file and writes
+the output to ./final/dist.js.
 
 Steps performed:
-1. Minify and gzip-compress the contents of ./src/endpoint.html and encode the result in Base64
-2. Replace the {{ endpoint.html }} placeholder in ./src/spotelly.js with the encoded string
-3. Write the modified source to ./dist/final.js
 
-This script must be run after each modification of either spotelly.js or endpoint.html and can
-be executed with 'npm run build'.
+- To conserve memory on the Shelly, compress the html files and replace the html placeholders
+  in spotelly.js with the BASE64-encoded compressed output
+- To reduce the physical script size, remove all comments from spotelly.js and re-format the code
+  with prettier
+
+This script must be executed after each change to one of the files in the src directory and can
+be started with 'npm run build'.
 */
 
-import { minify } from "html-minifier";
+import babel from "@babel/core";
+import { gzipAsync } from "@gfx/zopfli";
+import { minify } from "html-minifier-terser";
 import fs from "node:fs";
-import zlib from "node:zlib";
+import * as prettier from "prettier";
 
-function compress(htmlfile) {
-  // console.log("-".repeat(50));
+async function compress(htmlfile) {
   console.log(`Processing ${htmlfile}:`);
 
   const html = fs.readFileSync(htmlfile, "utf8");
   console.log("HTML:", html.length, "bytes");
 
-  const minified = minify(html, {
+  const minified = await minify(html, {
     collapseInlineTagWhitespace: true,
     collapseWhitespace: true,
-    minifyJS: true,
+    minifyCSS: true,
+    minifyJS: {
+      ecma: 2015,
+      toplevel: true,
+    },
     removeAttributeQuotes: true,
     removeComments: true,
     removeOptionalTags: true,
+    sortAttributes: true,
+    sortClassName: true,
   });
+  console.log(minified);
   console.log("Minified:", minified.length, "bytes");
 
-  const compressed = zlib.gzipSync(minified);
+  const compressed = await gzipAsync(minified, {
+    numiterations: 20,
+    blocksplitting: true,
+    blocksplittingmax: 15,
+  });
   console.log("Compressed:", compressed.length, "bytes");
 
-  const encoded = compressed.toString("base64");
+  const encoded = Buffer.from(compressed).toString("base64");
   console.log("Encoded:", encoded.length, "bytes", "\n");
 
   return encoded;
 }
 
-function main(sourceJS, targetJS) {
+async function main(sourceJS, targetJS) {
   let source = fs.readFileSync(sourceJS, "utf8");
 
   // replace html placeholders in spotelly.js with the compressed versions
   for (const match of source.matchAll(/({{ (.*\.html) }})/g)) {
-    source = source.replace(match[1], compress(`./src/${match[2]}`));
+    source = source.replace(match[1], await compress(`./src/${match[2]}`));
   }
+
+  // remove comments from source to reduce physical script size
+  source = babel.transformSync(source, { comments: false, retainLines: true }).code;
+
+  // format modified source with prettier
+  const options = await prettier.resolveConfig(sourceJS);
+  source = await prettier.format(source, { ...options, filePath: sourceJS, parser: "babel" });
 
   // write modified source to dist folder
   fs.writeFileSync(targetJS, source);

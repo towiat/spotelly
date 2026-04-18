@@ -1,0 +1,345 @@
+<!doctype html>
+<html data-bs-theme="dark">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spotelly Configuration</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    />
+  </head>
+
+  <body>
+    <div class="d-flex flex-column align-items-center">
+      <form>
+        <div>
+          <!-- General settings card -->
+          <div class="card mt-3 p-3 border-3">
+            <h5 class="card-title text-center mb-3">Settings</h5>
+            <!-- Bidding zone dropdown -->
+            <div class="row mb-3">
+              <label for="b" class="col-6 col-form-label text-end">Bidding Zone</label>
+              <div class="col-3">
+                <select class="form-select" id="b" required>
+                  <option>AT</option>
+                  <option>BE</option>
+                  <option>BG</option>
+                  <option>CH</option>
+                  <option>CZ</option>
+                  <option>DE-LU</option>
+                  <option>DK1</option>
+                  <option>DK2</option>
+                  <option>EE</option>
+                  <option>ES</option>
+                  <option>FI</option>
+                  <option>FR</option>
+                  <option>GR</option>
+                  <option>HR</option>
+                  <option>HU</option>
+                  <option>IT-Calabria</option>
+                  <option>IT-Centre-North</option>
+                  <option>IT-Centre-South</option>
+                  <option>IT-North</option>
+                  <option>IT-Sardinia</option>
+                  <option>IT-Sicily</option>
+                  <option>IT-South</option>
+                  <option>LT</option>
+                  <option>LV</option>
+                  <option>ME</option>
+                  <option>NL</option>
+                  <option>NO1</option>
+                  <option>NO2</option>
+                  <option>NO3</option>
+                  <option>NO4</option>
+                  <option>NO5</option>
+                  <option>PL</option>
+                  <option>PT</option>
+                  <option>RO</option>
+                  <option>RS</option>
+                  <option>SE1</option>
+                  <option>SE2</option>
+                  <option>SE3</option>
+                  <option>SE4</option>
+                  <option>SI</option>
+                  <option>SK</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Mode selection dropdown -->
+            <div class="row mb-3">
+              <label for="i" class="col-6 col-form-label text-end">Mode</label>
+              <div class="col-3">
+                <select class="form-select" id="i" required>
+                  <option value="3600000">60-minute</option>
+                  <option value="900000">15-minute</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Price Modifier card -->
+          <div class="card mt-3 p-3 border-3">
+            <h5 class="card-title text-center">Price Modifier</h5>
+            <div class="w-100" id="u" style="background: #f0f0f0"></div>
+            <div class="w-100" id="p"></div>
+            <div class="w-100" id="d" style="background: #f0f0f0"></div>
+            <div class="alert alert-danger text-center d-none" id="a">
+              Length limit (1024) exceeded!
+            </div>
+          </div>
+
+          <!-- Switch card container -->
+          <div id="s"></div>
+
+          <!-- Submit button -->
+          <div class="d-flex justify-content-center p-3">
+            <button type="button" class="btn btn-primary" id="o">
+              <span class="spinner-border spinner-border-sm d-none"></span>
+              <span>Submit</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Template for switch card -->
+    <template id="w">
+      <div class="card mt-3 p-3 border-3">
+        <h5 class="card-title text-center"></h5>
+        <div class="table-responsive">
+          <table class="table m-0">
+            <thead>
+              <tr class="text-center">
+                <th style="width: 12ch">From</th>
+                <th style="width: 12ch">To</th>
+                <th style="width: 15ch">Type</th>
+                <th style="width: 10ch">Dur.</th>
+                <th style="width: 13ch">Prices</th>
+                <th style="width: 10ch">Limit</th>
+                <th style="width: 5ch"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="text-center">
+                <td class="border-bottom-0" colspan="7">
+                  <button type="button" class="btn btn-primary">Add Time Window</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="bg-body text-muted">
+          <div class="form-check">
+            <label class="form-check-label">Invert Switch</label>
+            <input type="checkbox" class="form-check-input" name="i" />
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Template for table row -->
+    <template id="r">
+      <tr name="x">
+        <!-- from -->
+        <td>
+          <select class="form-select text-end" dir="rtl" name="s"></select>
+        </td>
+        <!-- to -->
+        <td>
+          <select class="form-select text-end" dir="rtl" name="e"></select>
+        </td>
+        <!-- type -->
+        <td>
+          <select class="form-select" name="t">
+            <option value="0">block</option>
+            <option value="1">non-block</option>
+          </select>
+        </td>
+        <!-- duration -->
+        <td>
+          <select class="form-select text-end" dir="rtl" name="d"></select>
+        </td>
+        <!-- price selection -->
+        <td>
+          <select class="form-select" name="p">
+            <option value="0">lowest</option>
+            <option value="1">highest</option>
+          </select>
+        </td>
+        <!-- price limit -->
+        <td>
+          <input type="text" class="form-control text-end" name="l" />
+        </td>
+        <!-- remove button -->
+        <td class="text-center align-middle">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger remove-row-btn"
+            title="Remove row"
+          >
+            &times;
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.43.6/src-min/ace.min.js"></script>
+    <script>
+      const q = (ele, string) => ele.querySelector(string);
+
+      const body = q(document, "body");
+
+      const biddingZone = q(body, "#b");
+      const codeLengthAlert = q(body, "#a");
+      const form = q(body, "form");
+      const interval = q(body, "#i");
+      const rowTemplate = q(body, "#r").content;
+      const spinner = q(body, ".spinner-border");
+      const submitButton = q(body, "#o");
+      const switchCardTemplate = q(body, "#w").content;
+      const switchDiv = q(body, "#s");
+
+      const fromSelect = q(rowTemplate, "[name=s]");
+      const toSelect = q(rowTemplate, "[name=e]");
+      const durationSelect = q(rowTemplate, "[name=d]");
+
+      const aceOptions = {
+        fontSize: "0.9em",
+        highlightActiveLine: false,
+        highlightGutterLine: false,
+        maxLines: 30,
+        mode: "ace/mode/javascript",
+        printMargin: false,
+        readOnly: true,
+        showFoldWidgets: false,
+        showLineNumbers: false,
+        tabSize: 2,
+        useWorker: false,
+      };
+
+      // build a timestring in the form HH:MM for a given second of the day
+      const ts = s => `${Math.floor(s / 3600)}:${((s % 3600) / 60).toString().padStart(2, 0)}`;
+
+      let conf = null;
+      let firstRun = true;
+
+      switchDiv.addEventListener("click", e => {
+        if (!e.target) return;
+        if (e.target.matches(".remove-row-btn")) {
+          const tr = e.target.closest("tr");
+          if (tr) tr.remove();
+        } else if (e.target.matches(".btn-primary")) {
+          e.target.closest("tr").before(createRow({ s: 0, e: 1, t: 0, d: 1, p: 0, l: "" }));
+        }
+      });
+
+      // if mode is changed, remove all time windows and update dropdowns
+      interval.addEventListener("change", resetRows);
+
+      function resetRows() {
+        switchDiv.querySelectorAll("[name=x]").forEach(e => e.remove());
+        fromSelect.innerHTML = "";
+        toSelect.innerHTML = "";
+        durationSelect.innerHTML = "";
+        const intervalSeconds = Number(interval.value) / 1000;
+        for (let i = 0, j = 0; i < 86400; i += intervalSeconds, j++) {
+          fromSelect.add(new Option(ts(i), j));
+          toSelect.add(new Option(ts(i + intervalSeconds), j + 1));
+          durationSelect.add(new Option(j + 1));
+        }
+      }
+
+      function createRow(row) {
+        const tr = rowTemplate.cloneNode(true);
+        for (const [key, value] of Object.entries(row)) {
+          q(tr, `[name=${key}]`).value = String(value);
+        }
+        return tr;
+      }
+
+      ace.edit("u", aceOptions).setValue("function priceModifier (datetime, spotPrice) {", -1);
+
+      ace.edit("d", aceOptions).setValue("}", -1);
+
+      const editor = ace.edit("p", { ...aceOptions, readOnly: false, useWorker: true });
+
+      // Display alert if maximum code length in the editor has been exceeded
+      editor.on("change", () => {
+        editor.getValue().length > 1024
+          ? codeLengthAlert.classList.remove("d-none")
+          : codeLengthAlert.classList.add("d-none");
+      });
+
+      function updateUI() {
+        if (firstRun) {
+          conf.w.forEach((_, idx) => {
+            const switchCard = switchCardTemplate.cloneNode(true);
+            q(switchCard, "h5").innerText = `Switch ${idx}`;
+            switchDiv.appendChild(switchCard);
+          });
+          firstRun = false;
+        }
+
+        biddingZone.value = conf.c.b;
+        interval.value = conf.c.i;
+        editor.setValue(conf.p, 1);
+        resetRows();
+        conf.w.forEach((timeWindows, idx) => {
+          const table = q(switchDiv.children[idx], "tbody");
+          for (const timeWindow of timeWindows) {
+            table.lastElementChild.before(createRow(timeWindow));
+          }
+          q(switchDiv.children[idx], "[name=i]").checked = conf.c.s[idx];
+        });
+      }
+
+      submitButton.addEventListener("click", () => {
+        if (!form.reportValidity()) {
+          return;
+        }
+
+        submitButton.disabled = true;
+        spinner.classList.remove("d-none");
+        setTimeout(() => {
+          spinner.classList.add("d-none");
+          submitButton.disabled = false;
+        }, 5000);
+
+        conf.c.b = biddingZone.value;
+        conf.c.i = Number(interval.value);
+        conf.p = editor.getValue();
+        [...switchDiv.children].forEach((switchCard, switchIndex) => {
+          conf.w[switchIndex] = [];
+          switchCard.querySelectorAll("[name=x]").forEach(tr => {
+            conf.w[switchIndex].push({
+              s: Number(q(tr, "[name=s]").value),
+              e: Number(q(tr, "[name=e]").value),
+              t: Number(q(tr, "[name=t]").value),
+              d: Number(q(tr, "[name=d]").value),
+              p: Number(q(tr, "[name=p]").value),
+              l: q(tr, "[name=l]").value,
+            });
+          });
+          conf.c.s[switchIndex] = q(switchCard, "[name=i]").checked;
+        });
+        callDataEndpoint(conf);
+      });
+
+      function callDataEndpoint(postData) {
+        fetch(
+          window.location.href.replace("config", "confdata"),
+          postData ? { method: "POST", body: JSON.stringify(postData) } : { method: "GET" },
+        )
+          .then(r => r.json())
+          .then(r => {
+            conf = r;
+            updateUI();
+          })
+          .catch(e => (body.innerHTML = e));
+      }
+
+      window.addEventListener("load", () => callDataEndpoint());
+    </script>
+  </body>
+</html>

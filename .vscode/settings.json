@@ -1,0 +1,4 @@
+{
+  "css.autoValidation": "Always",
+  "css.styleSheets": ["node_modules/bootstrap/dist/css/bootstrap.css"]
+}
