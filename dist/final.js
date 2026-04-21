@@ -288,6 +288,7 @@ HTTPServer.registerEndpoint("confdata", function (req, res) {
     CONF = JSON.parse(req.body);
     Script.storage.setItem("c", JSON.stringify(CONF.c));
     Script.storage.setItem("w", JSON.stringify(CONF.w));
+    if (!CONF.p) CONF.p = "  return spotPrice;";
     Script.storage.setItem("p", JSON.stringify(CONF.p));
     actv = true;
     updc();

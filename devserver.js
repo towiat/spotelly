@@ -166,6 +166,7 @@ const confdataEndpoint = (req, res) => {
         req.on("end", () => {
           console.log(body);
           config = JSON.parse(body);
+          if (!config.p) config.p = "  return spotPrice;";
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify(config));
