@@ -126,38 +126,44 @@ function clcw(prcs, srtd, wins) {
   let ons = zros.slice(0, prcs.length);
 
   for (const win of wins) {
-    const weix = Math.min(win.e, prcs.length);
-    const dur = Math.min(win.d, weix - win.s);
-    // win.p = 0 for lowest, 1 for highest prices
-    const lim = win.l ? Number(win.l) : win.p ? -Infinity : Infinity;
+    // window start index
+    const wsix = win[0];
+    // window end index - may be too high if clock is changed for daylight saving time
+    const weix = Math.min(win[1], prcs.length);
+    // duration - make sure that it is not longer than the time window
+    const dur = Math.min(win[3], weix - wsix);
+    // type - are we looking for high prices instead of low ones?
+    const high = Boolean(win[4]);
+    // convert price limit string to number; if empty, use negative/positive infinity instead
+    const lim = win[5] ? Number(win[5]) : high ? -Infinity : Infinity;
 
     // set all switch commands for the current window to zero
-    ons = upds(ons, win.s, zros.slice(win.s, weix));
+    ons = upds(ons, wsix, zros.slice(wsix, weix));
 
-    if (win.t === 0) {
+    if (win[2] === 0) {
       // block mode
       let csum = 0;
-      for (let i = win.s; i < win.s + dur; i++) csum += prcs[i];
+      for (let i = wsix; i < wsix + dur; i++) csum += prcs[i];
       let bsum = csum;
-      let sidx = win.s;
-      for (let i = win.s + dur; i < weix; i++) {
+      let sidx = wsix;
+      for (let i = wsix + dur; i < weix; i++) {
         csum = csum - prcs[i - dur] + prcs[i];
 
-        if (win.p ? csum > bsum : csum < bsum) {
+        if (high ? csum > bsum : csum < bsum) {
           bsum = csum;
           sidx = i - dur + 1;
         }
       }
       for (let i = sidx; i < sidx + dur; i++) {
-        if (win.p ? prcs[i] >= lim : prcs[i] <= lim) ons = upds(ons, i, "1");
+        if (high ? prcs[i] >= lim : prcs[i] <= lim) ons = upds(ons, i, "1");
       }
-    } else if (win.p) {
+    } else if (high) {
       // non-block mode, highest prices
       let c = 0;
       for (let i = srtd.length - 1; i >= 0; i--) {
         if (c === dur) break;
         const idx = srtd[i];
-        if (idx >= win.s && idx < weix) {
+        if (idx >= wsix && idx < weix) {
           if (prcs[idx] >= lim) ons = upds(ons, idx, "1");
           c++;
         }
@@ -167,7 +173,7 @@ function clcw(prcs, srtd, wins) {
       let c = 0;
       for (const i of srtd) {
         if (c === dur) break;
-        if (i >= win.s && i < weix) {
+        if (i >= wsix && i < weix) {
           if (prcs[i] <= lim) ons = upds(ons, i, "1");
           c++;
         }
@@ -217,14 +223,14 @@ function init() {
   // array of arrays for time windows
   // there is one array for each switch
   // each of these arrays holds the time window objects for one switch
-  // object structure:
-  // s: start index
-  // e: end index
-  // t: type (0 = block mode, 1 = non-block mode)
-  // d: duration (hours in 60-minute, quarter hours in 15-minute mode)
-  // p: price selector (0 = lowest, 1 = highest)
-  // l: price limit (string; empty = no limit, numeric value = limit)
-  CONF.w = []; // Array for timw windows
+  // time windows are modeled as arrays with the following values:
+  // index 0: time window start index (0..23 in 60-minute mode, 0..95 in 15-minute mode)
+  // index 1: time window end index (1..24 in 60-minute mode, 1..96 in 15-minute mode)
+  // index 2: type (0 = block mode, 1 = non-block mode)
+  // index 3: duration (1..24 in 60-minute mode, 1..96 in 15-minute mode)
+  // index 4: price selector (0 = lowest, 1 = highest)
+  // index 5: price limit (string; empty = no limit, numeric value = limit)
+  CONF.w = [];
 
   CONF.p = "  return spotPrice;"; // price modifier code
 

@@ -113,35 +113,40 @@ function clcw(prcs, srtd, wins) {
   let ons = zros.slice(0, prcs.length);
 
   for (const win of wins) {
-    const weix = Math.min(win.e, prcs.length);
-    const dur = Math.min(win.d, weix - win.s);
+    const wsix = win[0];
 
-    const lim = win.l ? Number(win.l) : win.p ? -Infinity : Infinity;
+    const weix = Math.min(win[1], prcs.length);
 
-    ons = upds(ons, win.s, zros.slice(win.s, weix));
+    const dur = Math.min(win[3], weix - wsix);
 
-    if (win.t === 0) {
+    const high = Boolean(win[4]);
+
+    const lim = win[5] ? Number(win[5]) : high ? -Infinity : Infinity;
+
+    ons = upds(ons, wsix, zros.slice(wsix, weix));
+
+    if (win[2] === 0) {
       let csum = 0;
-      for (let i = win.s; i < win.s + dur; i++) csum += prcs[i];
+      for (let i = wsix; i < wsix + dur; i++) csum += prcs[i];
       let bsum = csum;
-      let sidx = win.s;
-      for (let i = win.s + dur; i < weix; i++) {
+      let sidx = wsix;
+      for (let i = wsix + dur; i < weix; i++) {
         csum = csum - prcs[i - dur] + prcs[i];
 
-        if (win.p ? csum > bsum : csum < bsum) {
+        if (high ? csum > bsum : csum < bsum) {
           bsum = csum;
           sidx = i - dur + 1;
         }
       }
       for (let i = sidx; i < sidx + dur; i++) {
-        if (win.p ? prcs[i] >= lim : prcs[i] <= lim) ons = upds(ons, i, "1");
+        if (high ? prcs[i] >= lim : prcs[i] <= lim) ons = upds(ons, i, "1");
       }
-    } else if (win.p) {
+    } else if (high) {
       let c = 0;
       for (let i = srtd.length - 1; i >= 0; i--) {
         if (c === dur) break;
         const idx = srtd[i];
-        if (idx >= win.s && idx < weix) {
+        if (idx >= wsix && idx < weix) {
           if (prcs[idx] >= lim) ons = upds(ons, idx, "1");
           c++;
         }
@@ -150,7 +155,7 @@ function clcw(prcs, srtd, wins) {
       let c = 0;
       for (const i of srtd) {
         if (c === dur) break;
-        if (i >= win.s && i < weix) {
+        if (i >= wsix && i < weix) {
           if (prcs[i] <= lim) ons = upds(ons, i, "1");
           c++;
         }
@@ -259,7 +264,7 @@ HTTPServer.registerEndpoint(
   "config",
   htep,
   atob(
-    "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",
+    "H4sIAAAAAAACA8VYB3fjNhL+KzST8yPfkpDkdoktMnXbxSUvcnpbiBiJWIMAAwwl+/z03w9gU3G5frduH6ZxMPNhCO14j6kM70rwcixEOna/PUaRxlMTYw4FJIzqm3RcAFIvUxJBYuIvOcM8YbDgGcT1IuKSI6ciNhkVkIx8T1LrvOCwLJXGdIwcBaSTUiEIced9oeSMzytNkSs5HjTaseDyxss1zJIcsTSng0HGJHlvGAi+0EQCDmRZDKZKoUFNy0+PySH5aMC4wUFmzFpBCi6JlXgaRGLwToDJAWwajC+8TFBjEp/FMwG3HhV8LmOOUJg4A4mgPSePMyWqQvrpeKZ0UTtueZfxoTdVmoG2IKOaeQXGh9Y8P+5MEG6xC+ks4nqXXjF1dhNA5HJuxoP8eCuwU3taLW0oQacgtqKBZJ5NLD6pf7vM4trI9yxOpunnnDEb1ftJSRgPatVmcOd0mI4NCMiwldVBWglnydTT8EfFNbB0rErXnfSz6w59/rJHrzv0xZse/dShL1/G59/2i69Ga3jQwZcvezTp0Ku3PfqmQ6979GaN+thvr+MvqN2m5nRTBBI1xJdKY/5QPFHVlnjXbEI143Ir4IRnXNytBdsxzq979F2HLvrtXZ736Gq0hgdreLiGR2t43MGvz3vUP+ibqx711Zu8HK3hwRoeruFRD9/26KvxoOl+Oh5YpjS//1OM5OmFYv8iE/kDJnoLKipIDk+G7l96MowLLiuEbfXHjXZ03Gof39/gP3ag/fRrzTPw7E75jIPePdHLeDQcug1VXj2JkinNbuZaVZKdfjAbuq8+nYdO5TM69k8E3EqeCtDY/I4ZlXMrYrFUEnwXlqbnIOeYe4IXHL1gNDw4Cj24zQAYsL3dAjoX80RB2xn7vjLIZ3dx+wJp07C1nVaISnYeU5Se/YlLzQuq73zPvZmS1sY+RVnClLQ3b1L2TMmlBB03zdtZxqbwbW7OrXFOJ9XU7qoTDZroO9xwTOwWCEUpKIJLYPmfYswuR5BOBcQaTKmk4QtIx7WkP4Hx0HMC54k5UGb/6Fa58QinbClRv5RPRwdZnr7SqnhUca0eiI+d2Bb9gWJoFV9WmjxQHFpFzX/zqM+5o9Cuxj1ljFPF7p7cB2ulbX2nClG5KmRKuMYlf/6nuFPfRWj6GWPeNS/A+55LppYbza+L+wiHp/PYpenVyRUVAvM7fT+xshyym3407sjjWpy+lQt34iZLjlnej0MuywofutTiJmfebKOWT9XtYyNs0BF0m6ralbYJYt2Q7cxaf3PYdoO8u7R5jOtEo0jXo/M/H2DTv/HaGfPDdCpUdrMtHKVSybhW/J+TE2oJBnezy/k8t+LN0H2fd96aTceVRK1En1vdbmfiPB8f3e66WnDGBDw5QFWFgkvoZrsTmcLTUKgFxFotYyvZPiH1XEr8b2qT5mW/j7wAc9afkk2mmUzzEj2js+dv6jSDeFpxwcynI3J0SE4G1sVmL52GFNy52MBNuC5saoti0IMkgAjDJAXyRwX6blJXVOkAwwgTCJjKqgIkRr47on4YSSu0qw+mFusWU4tVg1297Yq2Gm5x1mLth6R9N0W8kZHt94g1Fq2xspi1eLnhaFqZsfoqybaT/kyIwP+5afKvfvjz8Neo+Hs2o1+j/O/ZHP4azZL7mU1hwv8Kp/6QfAyFHzkaCvuDn2XIF3DOJZzujdbi1xUi6E5c0FsHzenhMCoUs2FoBgOHBu/pgjZd8aNSc4kXVM+5dF4aKLuS4u50bxiZXC1fKcG+52wOaJzaiVzUy6qYgq5FSKd1lgdRZeB7pW9AW/EqWiSQpO8+vL+gmJOZULbHMHC3vHB1+uF9AH9yeHAyDAmqCdos5kFISsomSDUGB5G1e3cmAL15IishojLZG57NKpnVR3MShPfmySre2ioSS42XNMsDcGRrjkkQ2i6SmgJvri/OE9+Piu1lvrU860jb7DegpB4J4WAEh2c2fuDyw2RoWTo8w/FHJ0dD+/dFApF88SKsCGUskLD0rup5Eiwcy6XNoXhE8wJC6zWy2nxXW4tX/d6nAYT3TWZoqZQJZRuiGAR7w/BMA1Zaevgsw/raBGjzSVJs9pW0fYCf5a82D1wZl8nLBUg85wZBgg78TPDsxo9sVe/5LACCljuA4QYmBcUsBxP4ZGc6heu8e2ObvgGDgY/aD89wfx/7Zq1AGPB2w3YboXYj+/uPxyFTsFuEYBr8PIxGUfPj+3ZXqzCij+0qd1PVjyZWnQEBxm2kyo9mITGA37nqBH7fgVLzDLqPBl7AKIKbq5FnSoX1xSn07v0oHm1GYzvRVrVBS7HzZG1Y+tE9IWS2cRhHm4druArXB2EZ6PB+BmibuawvQESojDoVyTXMiIZS2NB2h/V/zvhRDWzGbojqT+4LwFyxU//rq8m1H7mhe/qXydUlMTUV7P0+0PbA9mavX177q5BgDrI5WO+NJWjYStCSYp5gVO7vB3Oy3KVZ23ydsB3SQqAjPz/2w+b0XcMtJu+ae5X34b1cvYssE8sSJPsi54K5lEI3EGx9ZUvdOcnINKIbKx6dr6s9J2Vkre3YiB5LzJ3lNjlPzTwMITAkc8/SIO1piDY49xTTdBiePeHGnVt93wNW52aschWurJBiM6JwY/BAuDonSq5ZGbgcz8m8201IRP1hLnWf4j7RpL4pWDL3R6f9GOWHp5tKylivcRUUTx/v+onKsUdp91DOON4Foe2rIIwbd7NmdiBH/JlnRwbQ3cxVhUEdjz+VS7QZ1L47juEwjOqOJm1/6xXfncNWWiabdXHNTX4mhKzb8CspaOkq7MTw7CvjHzRd9KbtXeY4SRL8BJqkTtsc22Vo/9XJmyavJ6PyzQSgY0sYLYN5PbXa0/2wY0JR1jRsaQ9if+/6G5eMri8GFgAA",
   ),
 );
 

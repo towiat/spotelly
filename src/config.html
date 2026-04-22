@@ -143,33 +143,33 @@
       <tr name="x">
         <!-- from -->
         <td>
-          <select class="form-select text-end" dir="rtl" name="s"></select>
+          <select class="form-select text-end" dir="rtl" name="v"></select>
         </td>
         <!-- to -->
         <td>
-          <select class="form-select text-end" dir="rtl" name="e"></select>
+          <select class="form-select text-end" dir="rtl" name="v"></select>
         </td>
         <!-- type -->
         <td>
-          <select class="form-select" name="t">
+          <select class="form-select" name="v">
             <option value="0">block</option>
             <option value="1">non-block</option>
           </select>
         </td>
         <!-- duration -->
         <td>
-          <select class="form-select text-end" dir="rtl" name="d"></select>
+          <select class="form-select text-end" dir="rtl" name="v"></select>
         </td>
         <!-- price selection -->
         <td>
-          <select class="form-select" name="p">
+          <select class="form-select" name="v">
             <option value="0">lowest</option>
             <option value="1">highest</option>
           </select>
         </td>
         <!-- price limit -->
         <td>
-          <input type="text" class="form-control text-end" name="l" />
+          <input type="text" class="form-control text-end" name="v" />
         </td>
         <!-- remove button -->
         <td class="text-center align-middle">
@@ -200,9 +200,9 @@
       const switchCardTemplate = q(body, "#w").content;
       const switchDiv = q(body, "#s");
 
-      const fromSelect = q(rowTemplate, "[name=s]");
-      const toSelect = q(rowTemplate, "[name=e]");
-      const durationSelect = q(rowTemplate, "[name=d]");
+      const fromSelect = rowTemplate.querySelectorAll("[name=v]")[0];
+      const toSelect = rowTemplate.querySelectorAll("[name=v]")[1];
+      const durationSelect = rowTemplate.querySelectorAll("[name=v]")[3];
 
       const aceOptions = {
         fontSize: "0.9em",
@@ -230,7 +230,7 @@
           const tr = e.target.closest("tr");
           if (tr) tr.remove();
         } else if (e.target.matches("[name=a]")) {
-          e.target.closest("tr").before(createRow({ s: 0, e: 1, t: 0, d: 1, p: 0, l: "" }));
+          e.target.closest("tr").before(createRow([0, 1, 0, 1, 0, ""]));
         }
       });
 
@@ -252,9 +252,7 @@
 
       function createRow(row) {
         const tr = rowTemplate.cloneNode(true);
-        for (const [key, value] of Object.entries(row)) {
-          q(tr, `[name=${key}]`).value = String(value);
-        }
+        tr.querySelectorAll("[name=v]").forEach((ele, idx) => (ele.value = String(row[idx])));
         return tr;
       }
 
@@ -308,20 +306,16 @@
         conf.c.b = biddingZone.value;
         conf.c.i = Number(interval.value);
         conf.p = editor.getValue();
-        [...switchDiv.children].forEach((switchCard, switchIndex) => {
-          conf.w[switchIndex] = [];
-          switchCard.querySelectorAll("[name=x]").forEach(tr => {
-            conf.w[switchIndex].push({
-              s: Number(q(tr, "[name=s]").value),
-              e: Number(q(tr, "[name=e]").value),
-              t: Number(q(tr, "[name=t]").value),
-              d: Number(q(tr, "[name=d]").value),
-              p: Number(q(tr, "[name=p]").value),
-              l: q(tr, "[name=l]").value,
-            });
-          });
-          conf.c.s[switchIndex] = q(switchCard, "[name=i]").checked;
-        });
+
+        conf.w = [...switchDiv.children].map(switchCard =>
+          [...switchCard.querySelectorAll("[name=x]")].map(row =>
+            [...row.querySelectorAll("[name=v]")].map(
+              (e, idx) => (idx === 5 ? e.value : Number(e.value)), //awkward, but limit must be a string
+            ),
+          ),
+        );
+
+        conf.c.s = [...switchDiv.querySelectorAll("[name=i]")].map(e => e.checked);
         callDataEndpoint(conf);
       });
 
