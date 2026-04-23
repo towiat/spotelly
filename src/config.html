@@ -107,28 +107,26 @@
     <template id="w">
       <div class="card mt-3 p-3 border-3">
         <h5 class="card-title text-center"></h5>
-        <div class="table-responsive">
-          <table class="table m-0">
-            <thead>
-              <tr class="text-center">
-                <th style="width: 12ch">From</th>
-                <th style="width: 12ch">To</th>
-                <th style="width: 15ch">Type</th>
-                <th style="width: 10ch">Dur.</th>
-                <th style="width: 13ch">Prices</th>
-                <th style="width: 10ch">Limit</th>
-                <th style="width: 5ch"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="text-center">
-                <td class="border-bottom-0" colspan="7">
-                  <button type="button" class="btn btn-primary" name="a">Add Time Window</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <table class="table">
+          <thead>
+            <tr class="text-center">
+              <th style="width: 12ch">From</th>
+              <th style="width: 12ch">To</th>
+              <th style="width: 15ch">Type</th>
+              <th style="width: 10ch">Dur.</th>
+              <th style="width: 13ch">Prices</th>
+              <th style="width: 10ch">Limit</th>
+              <th style="width: 5ch"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="text-center">
+              <td class="border-bottom-0" colspan="7">
+                <button type="button" class="btn btn-primary" name="a">Add Time Window</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
         <div class="bg-body text-muted">
           <div class="form-check">
             <label class="form-check-label">Invert Switch</label>
@@ -187,6 +185,14 @@
     <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.43.6/src-min/ace.min.js"></script>
     <script>
       const q = (ele, string) => ele.querySelector(string);
+      const disableButton = button => {
+        button.disabled = true;
+        button.classList.add("bg-danger");
+      };
+      const enableButton = button => {
+        button.disabled = false;
+        button.classList.remove("bg-danger");
+      };
 
       const body = q(document, "body");
 
@@ -224,6 +230,7 @@
       let conf = null;
       let firstRun = true;
 
+      // remove row and add time window button
       switchDiv.addEventListener("click", e => {
         if (!e.target) return;
         if (e.target.matches(".remove-row-btn")) {
@@ -232,11 +239,13 @@
         } else if (e.target.matches("[name=a]")) {
           e.target.closest("tr").before(createRow([0, 1, 0, 1, 0, ""]));
         }
+        checkLimits();
       });
 
       // if mode is changed, remove all time windows and update dropdowns
       interval.addEventListener("change", resetRows);
 
+      // delete all time windows and set the dropdown options for the selected mode
       function resetRows() {
         switchDiv.querySelectorAll("[name=x]").forEach(e => e.remove());
         fromSelect.innerHTML = "";
@@ -250,16 +259,20 @@
         }
       }
 
+      // create a time window row
       function createRow(row) {
         const tr = rowTemplate.cloneNode(true);
         tr.querySelectorAll("[name=v]").forEach((ele, idx) => (ele.value = String(row[idx])));
         return tr;
       }
 
+      // read only editor for the first line of the price modifier
       ace.edit("u", aceOptions).setValue("function priceModifier (datetime, spotPrice) {", -1);
 
+      // read only editor for the last line of the price modifier
       ace.edit("d", aceOptions).setValue("}", -1);
 
+      // main edit window for the price modifier
       const editor = ace.edit("p", { ...aceOptions, readOnly: false, useWorker: true });
 
       // Display alert if maximum code length in the editor has been exceeded
@@ -269,6 +282,7 @@
           : codeLengthAlert.classList.add("d-none");
       });
 
+      // when called for the first time, add a card for each switch; then update UI with config data
       function updateUI() {
         if (firstRun) {
           conf.w.forEach((_, idx) => {
@@ -289,8 +303,27 @@
           }
           q(switchDiv.children[idx], "[name=i]").checked = conf.c.s[idx];
         });
+        checkLimits();
       }
 
+      // disable add/submit buttons if needed
+      function checkLimits() {
+        const windowCount = switchDiv.querySelectorAll("[name=x]").length;
+        // disable add buttons if we have 30 or more time windows
+        switchDiv.querySelectorAll("[name=a]").forEach(button => {
+          if (windowCount >= 30) {
+            disableButton(button);
+            button.innerText = "Time Window Limit (30) reached!";
+          } else {
+            enableButton(button);
+            button.innerText = "Add Time Window";
+          }
+        });
+        // submit button is only enabled if at least one time window is defined
+        windowCount ? enableButton(submitButton) : disableButton(submitButton);
+      }
+
+      // submit the form
       submitButton.addEventListener("click", () => {
         if (!form.reportValidity()) {
           return;
