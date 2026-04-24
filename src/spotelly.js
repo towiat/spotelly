@@ -77,7 +77,11 @@ function set(val) {
 
 function getP() {
   let now = new Date();
-  let strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  let day_offset = 1;
+  if (now.getHours() < 15) {
+    day_offset = 0;
+  }
+  let strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + day_offset);
   let year = strt.getFullYear().toString();
   let month = (strt.getMonth() + 1).toString();
   let day = strt.getDate().toString();
@@ -230,7 +234,8 @@ function init() {
     return;
   }
 
-  if (new Date().getHours() >= 15) timH = Timer.set(0, false, getP);
+  // get prices on startup
+  timH = Timer.set(0, false, getP);
 
   HTTPServer.registerEndpoint("spotelly", spEP);
   HTTPServer.registerEndpoint("data", dtEP);
