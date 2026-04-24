@@ -24,7 +24,11 @@ function set(q) {
 
 function getP() {
   const now = new Date();
-  const strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  let day_offset = 1;
+  if (now.getHours() < 15) {
+    day_offset = 0;
+  }
+  const strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + day_offset);
   const year = strt.getFullYear().toString();
   const month = (strt.getMonth() + 1).toString();
   const day = strt.getDate().toString();
@@ -279,7 +283,7 @@ function stup() {
     return;
   }
 
-  if (new Date().getHours() >= 15) timh = Timer.set(0, false, getP);
+  timH = Timer.set(0, false, getP);
 }
 
 // Script startup procedure starts here
