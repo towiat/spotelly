@@ -1,5 +1,47 @@
 # Changelog
 
+## 4.0 (2026-04-25)
+
+This is a major version with significant changes and improvements. Make sure to read the updated
+documentation in full before upgrading.
+
+- **New: Configuration WebUI**<br>
+  The script now comes with its own configuration UI. After installing and starting the script on
+  the Shelly as usual, open `http://<shelly_ip>/script/<script_id>/config` in the browser. The
+  script will remain in an idle state until a configuration has been defined and submitted.
+- **New: Persistent Configuration Data**<br>
+  Configuration data is now stored in script storage. This means that the configuration stays
+  available even when the script is replaced with a new version (unless the changelog of the new
+  version states otherwise). Configuration data is automatically removed when the script is deleted.
+- **New: Multi-Switch Support**<br>
+  On multi-switch Shelly devices, the script can now control all available switches instead of only
+  one. It automatically detects the number of switch instances on the device and provides a separate
+  configuration card and timetable for each of them.<br>
+  Note that the script only takes control of switches that have at least one time window defined.
+- **New: Multiple Time Windows**<br>
+  Instead of only one time window, up to 30 time windows can now be defined and distributed among
+  the available switches as needed.
+- **New: Time Windows for High Prices**<br>
+  Time windows can now be set to search for the highest instead of the lowest prices. This can for
+  example be used on Shelly devices which control the output of a battery to make sure that the
+  stored energy is consumed when prices are high.
+- **New: Switch Selection in Timetable UI**<br>
+  The timetable view now has a dropdown that allows the selection of the switch for which the data
+  should be displayed. It is also possible to directly open the timetable for a given switch by
+  adding the switch id to the timetable URL:<br>
+  `http://<shelly_ip>/script/<script_id>/spotelly?id=<switch_id>`
+- **Changed: Timezone in the Timetable UI**<br>
+  The dates and times in the timetable UI are now shown in the timezone of the Shelly, not the
+  timezone of the client.
+- **Removed: Fallback Switch**<br>
+  The switch to indicate if fallback mode should be used is no longer available. Fallback mode
+  will now be applied automatically if the prices for the next day could not be retrieved from
+  the API.
+- **Removed: Telegram Integration**<br>
+  The Telegram notification feature has been removed. This feature hasn't made a lot of sense
+  anymore in the recent releases since the calculation results are way too complex to send them
+  in a notification message and the resources needed for this feature were better spent elsewhere.
+
 ## 3.6 (2025-11-18)
 
 This release enhances the `priceModifier` function so that it can be used to calculate date- or
