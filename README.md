@@ -209,7 +209,7 @@ you do it:
   after 15:00.
 - If you submit the configuration after 15:00, the script will run the calculation immediately.
 
-The configuration results can be reviewed and modified in the timetable view which can be opened
+The calculation results can be reviewed and modified in the timetable view which can be opened
 in the browser with the URL `http://<shelly_ip>/script/<script_id>/spotelly`.
 
 Note: On multi-switch devices, the timetable view will show the timetable for switch `0` by default
@@ -225,6 +225,7 @@ If there are no specific upgrade instructions in the CHANGELOG, use the followin
 
 1. Stop the script
 1. COMPLETELY replace the code of the script with the new version
+1. Save the script
 1. Start the script
 
 The script will automatically reload the stored configuration.

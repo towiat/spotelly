@@ -73,7 +73,7 @@ function prcP(res, errc, errm, strt) {
     }
 
     fbm = true;
-    const mult = CONF.c.i / 900000;
+    const mult = 3600000 / CONF.c.i;
     for (const p of [
       75.6, 69.8, 67.3, 65.3, 66.3, 73.3, 89.7, 101.6, 97.4, 82.1, 68.7, 60, 53.5, 50.2, 52.8, 63.8,
       78.5, 97.5, 111.6, 121, 115.8, 100.2, 90.1, 79.7,

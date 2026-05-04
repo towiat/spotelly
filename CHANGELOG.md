@@ -1,5 +1,22 @@
 # Changelog
 
+## 4.1 (2026-05-04)
+
+This is a bugfix release that resolves one issue:
+
+- **Fixed: Fallback Mode**<br>
+  An incorrect number of price records was created in fallback mode, causing the script to run out
+  of sync with the calendar.
+
+**Note**<br>
+The API server did not deliver price data for today, May 4 for the Austrian bidding zone and it
+seems that this issue also affects tomorrow's prices (some other bidding zones that I checked worked
+fine).
+
+Installing this version will make sure that fallback mode works as intended, but price data will
+continue to be missing for the affected bidding zone(s) until this issue is resolved at the server
+side (the script will automatically resume normal operation at that point).
+
 ## 4.0 (2026-04-25)
 
 This is a major version with significant changes and improvements. Make sure to read the updated
