@@ -229,7 +229,7 @@ schedule.
 The script emits an event whenever this check occurs. The name of this event is `spotelly_tick` and
 it carries the following data:
 
-```jsonc
+```javascript
 {
   current_price: 10, // price for the current 15/60 minute period (will be NaN in fallback mode)
   next_price: 12,    // price for the next 15/60 minute period (will be NaN in fallback mode)
