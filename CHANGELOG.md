@@ -1,5 +1,54 @@
 # Changelog
 
+## 4.2 (2026-05-25)
+
+This release adds a new feature that makes it possible to attach your own code to the script's
+actions without modifying the script itself. The principle is as follows:
+
+At each full hour or quarter hour (depending on the operating mode that you have set), the script
+checks its internal schedule and makes sure that the state of all switches it controls matches the
+schedule.
+
+With this release, the script will emit an event whenever this check occurs. The name of this event
+is `spotelly_tick` and it carries the following data:
+
+```json
+{
+  current_price: 10, // price for the current 15/60 minute period (will be NaN in fallback mode)
+  next_price: 12,    // price for the next 15/60 minute period (will be NaN in fallback mode)
+  // one of the following for each switch that is controlled by the script
+  // these are always included, even when the state hasn't changed from the previous period
+  switch_0: true,    // switch state for the current 15/60 minute period
+  switch_2: false
+}
+```
+
+You can process these events in your own, separate script - like this one, which just listens for
+the event and prints the event data to the console on each trigger:
+
+```javascript
+Shelly.addEventHandler(function (event) {
+  if (event.name === "script" && event.info && event.info.event === "spotelly_tick") {
+    const data = event.info.data;
+    console.log("The current price is", data.current_price, "ct/kWh.");
+    console.log("The next price will be", data.next_price, "ct/kWh.");
+    console.log("Switch 0 is", data.switch_0 ? "ON." : "OFF.");
+    console.log("Switch 2 is", data.switch_2 ? "ON." : "OFF.");
+  }
+});
+```
+
+This gives you the ability to cover a wide variety of use cases - you could, for example:
+
+- Propagate switch commands to other Shelly or non-Shelly devices in your network
+- Send the current/next price to a virtual component or a display
+- Trigger notifications via your preferred service
+- Update the Shelly Cloud Live Tariff with the current price
+- ...etc
+
+This also means that your custom additions are cleanly decoupled from the main script and will
+continue to work when you update the script to a new version.
+
 ## 4.1 (2026-05-04)
 
 This is a bugfix release that resolves one issue:

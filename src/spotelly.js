@@ -1,4 +1,4 @@
-// Spotelly Version 4.1
+// Spotelly Version 4.2
 // This script uses EPEX spot energy prices to control the power output of a Shelly device.
 // See https://github.com/towiat/spotelly for the full documentation.
 // This script uses price data from http://energy-charts.info
@@ -190,13 +190,17 @@ function chck() {
   const time = new Date(now - (now % CONF.c.i));
   const q = []; // queue for switch commands
   if (time.getTime() === anch) {
-    prc.splice(0, 1);
+    const evnt = {};
+    evnt.current_price = Number(prc.splice(0, 1)) / 100;
+    evnt.next_price = prc[0] ? Number(prc[0]) / 100 : NaN;
     CONF.w.forEach(function (swch, idx) {
       if (!swch.length) return; // no time windows for this switch - skip
       const o = on[idx][0] === "1";
       on[idx] = on[idx].slice(1);
       q.push({ id: idx, on: o });
+      evnt["switch_" + idx] = o;
     });
+    Shelly.emitEvent("spotelly_tick", evnt);
     set(q);
     anch = prc.length ? anch + CONF.c.i : 0;
   }
