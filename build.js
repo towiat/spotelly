@@ -13,7 +13,7 @@ This script must be executed after each change to one of the files in the src di
 be started with 'npm run build'.
 */
 
-import babel from "@babel/core";
+import { transformSync } from "@babel/core";
 import { gzipAsync } from "@gfx/zopfli";
 import { minify } from "html-minifier-terser";
 import fs from "node:fs";
@@ -64,7 +64,7 @@ async function main(sourceJS, targetJS) {
   }
 
   // remove comments from source to reduce physical script size
-  source = babel.transformSync(source, { comments: false, retainLines: true }).code;
+  source = transformSync(source, { comments: false, retainLines: true }).code;
 
   // format modified source with prettier
   const options = await prettier.resolveConfig(sourceJS);
