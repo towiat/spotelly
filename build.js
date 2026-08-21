@@ -6,8 +6,7 @@ Steps performed:
 
 - To conserve memory on the Shelly, compress the html files and replace the html placeholders
   in spotelly.js with the BASE64-encoded compressed output
-- To reduce the physical script size, remove all comments from spotelly.js and re-format the code
-  with prettier
+- To reduce the physical script size, remove all comments and empty lines from spotelly.js
 
 This script must be executed after each change to one of the files in the src directory and can
 be started with 'npm run build'.
@@ -64,11 +63,7 @@ async function main(sourceJS, targetJS) {
   }
 
   // remove comments from source to reduce physical script size
-  source = transformSync(source, { comments: false, retainLines: true }).code;
-
-  // format modified source with prettier
-  const options = await prettier.resolveConfig(sourceJS);
-  source = await prettier.format(source, { ...options, filePath: sourceJS, parser: "babel" });
+  source = transformSync(source, { comments: false }).code;
 
   // write modified source to dist folder
   fs.writeFileSync(targetJS, source);
