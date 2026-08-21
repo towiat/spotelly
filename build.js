@@ -16,7 +16,6 @@ import { transformSync } from "@babel/core";
 import { gzipAsync } from "@gfx/zopfli";
 import { minify } from "html-minifier-terser";
 import fs from "node:fs";
-import * as prettier from "prettier";
 
 async function compress(htmlfile) {
   console.log(`Processing ${htmlfile}:`);
