@@ -110,6 +110,22 @@ function prcP(res, errc, errm, strt) {
 
   for (const p of prcs) prc.push(fbm ? "NaN" : Math.round(p * 100));
 
+  prcs = null;
+
+  if (anch < Date.now()) {
+    while (anch < Date.now()) {
+      prc.splice(0, 1);
+      CONF.w.forEach(function (swch, idx) {
+        if (swch.length) on[idx] = on[idx].slice(1);
+      });
+      anch += CONF.c.i;
+    }
+
+    if (new Date().getHours() >= 15) timh = Timer.set(0, false, getP, 1);
+  }
+
+  if (!prc.length) anch = 0;
+
   console.log("Calculation done, runtime:", Math.floor(Date.now() - st), "ms");
 }
 
@@ -190,7 +206,7 @@ function chck() {
     anch = prc.length ? anch + CONF.c.i : 0;
   }
 
-  if (time.getHours() === 15 && time.getMinutes() === 0) timh = Timer.set(roff, false, getP);
+  if (time.getHours() === 15 && time.getMinutes() === 0) timh = Timer.set(roff, false, getP, 1);
 }
 
 function htep(req, res, html) {
@@ -258,7 +274,7 @@ function stup() {
     return;
   }
 
-  if (new Date().getHours() >= 15) timh = Timer.set(0, false, getP);
+  Timer.set(0, false, getP, 0);
 }
 
 HTTPServer.registerEndpoint(
