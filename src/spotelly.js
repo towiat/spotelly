@@ -327,10 +327,9 @@ HTTPServer.registerEndpoint("confdata", function (req, res) {
   res.send();
 });
 
-// build a string of 100 zeroes - no string.repeat() on the Shelly
-// this will save us performance down the line
-let zros = "";
-for (let i = 0; i < 100; i++) zros += "0";
+// this string of 100 zeroes will save us performance down the line
+const zros =
+  "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
 let CONF = { c: null, w: null, p: null };
 let on = [];
