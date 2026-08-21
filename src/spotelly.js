@@ -7,6 +7,23 @@ function upds(str, idx, val) {
   return str.slice(0, idx) + val + str.slice(idx + val.length);
 }
 
+function bdat(d, offs) {
+  const strt = new Date(d.getFullYear(), d.getMonth(), d.getDate() + offs);
+  const year = strt.getFullYear().toString();
+  const month = (strt.getMonth() + 1).toString();
+  const day = strt.getDate().toString();
+  return {
+    s: [
+      year,
+      "-",
+      month.length === 1 ? "0" + month : month,
+      "-",
+      day.length === 1 ? "0" + day : day,
+    ].join(""),
+    t: strt.getTime(),
+  };
+}
+
 function next() {
   const info = Timer.getInfo(timh);
   if (info === undefined) return 0;
@@ -22,23 +39,10 @@ function set(q) {
   });
 }
 
-function getP() {
-  const now = new Date();
-  const strt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const year = strt.getFullYear().toString();
-  const month = (strt.getMonth() + 1).toString();
-  const day = strt.getDate().toString();
-  const parm = [
-    year,
-    "-",
-    month.length === 1 ? "0" + month : month,
-    "-",
-    day.length === 1 ? "0" + day : day,
-  ].join("");
-
-  const url = "https://api.energy-charts.info/price?bzn=" + CONF.c.b + "&start=" + parm;
-
-  Shelly.call("http.get", { url: url }, prcP, strt.getTime());
+function getP(offs) {
+  const d = bdat(new Date(), offs);
+  const url = "https://api.energy-charts.info/price?bzn=" + CONF.c.b + "&start=" + d.s;
+  Shelly.call("http.get", { url: url }, prcP, d.t);
 }
 
 function prcP(res, errc, errm, strt) {
