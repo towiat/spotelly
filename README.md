@@ -310,4 +310,6 @@ and merge process.
 ### I have questions or want to give feedback about the script. Where can I do that?
 
 If you cannot or do not want to open an issue in this repository, you can also visit the Shelly
-community forum where I monitor a [thread](https://community.shelly.cloud/topic/2510-script-price-based-control-of-shelly-devices/) about the script.
+community forum where I monitor a
+[thread](https://community.shelly.cloud/topic/15202-script-price-based-control-of-shelly-devices/)
+about the script.
