@@ -16,7 +16,7 @@ export default [
     },
   },
   {
-    files: ["src/*.js"],
+    files: ["dist/*.js", "src/*.js"],
     rules: {
       "func-names": ["error", "never"],
       "func-style": ["error", "declaration"],
