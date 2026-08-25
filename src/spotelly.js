@@ -1,4 +1,4 @@
-// Spotelly Version 4.2
+// Spotelly Version 4.3
 // This script uses EPEX spot energy prices to control the power output of a Shelly device.
 // See https://github.com/towiat/spotelly for the full documentation.
 // This script uses price data from http://energy-charts.info
@@ -24,6 +24,15 @@ function bdat(d, offs) {
   };
 }
 
+// Remove all records before the specified datetime
+function cull(recs) {
+  prc.splice(0, recs);
+  CONF.w.forEach(function (swch, idx) {
+    if (swch.length) on[idx] = on[idx].slice(recs);
+  });
+  prc.length ? (anch += CONF.c.i * recs) : (anch = 0);
+}
+
 function next() {
   const info = Timer.getInfo(timh);
   if (info === undefined) return 0;
@@ -42,10 +51,10 @@ function set(q) {
 function getP(offs) {
   const d = bdat(new Date(), offs);
   const url = "https://api.energy-charts.info/price?bzn=" + CONF.c.b + "&start=" + d.s;
-  Shelly.call("http.get", { url: url }, prcP, d.t);
+  Shelly.call("http.get", { url: url }, prcP, { strt: d.t, offs: offs });
 }
 
-function prcP(res, errc, errm, strt) {
+function prcP(res, errc, errm, args) {
   const st = Date.now();
   let fbm = false;
   let prcs = [];
@@ -76,9 +85,9 @@ function prcP(res, errc, errm, strt) {
   }
 
   if (err) {
-    if (strt > Date.now() + 1800000) {
+    if (args.strt > Date.now() + 1800000) {
       // retry only if day starts at least 30 minutes in the future
-      timh = Timer.set(1200000, false, getP);
+      timh = Timer.set(1200000, false, getP, args.offs);
       console.log(err, "Trying again at", next());
       return;
     }
@@ -96,7 +105,7 @@ function prcP(res, errc, errm, strt) {
   let srtd = []; // indices of prices in ascending order
 
   // call the price modifier function for each price
-  for (let i = 0, dt = strt; i < prcs.length; i++, dt += CONF.c.i) {
+  for (let i = 0, dt = args.strt; i < prcs.length; i++, dt += CONF.c.i) {
     const p = prcm(new Date(dt), prcs[i] / 10);
     prcs[i] = p;
 
@@ -110,7 +119,7 @@ function prcP(res, errc, errm, strt) {
     srtd.splice(lo, 0, i);
   }
 
-  if (anch === 0) anch = strt;
+  if (anch === 0) anch = args.strt;
 
   // process time window array for each switch that has one
   CONF.w.forEach(function (swch, idx) {
@@ -124,20 +133,13 @@ function prcP(res, errc, errm, strt) {
 
   prcs = null;
 
-  // if we have records before the system time, remove them
-  if (anch < Date.now()) {
-    while (anch < Date.now()) {
-      prc.splice(0, 1);
-      CONF.w.forEach(function (swch, idx) {
-        if (swch.length) on[idx] = on[idx].slice(1);
-      });
-      anch += CONF.c.i;
-    }
-    // if it is later than 15:00, get the records for the next day
-    if (new Date().getHours() >= 15) timh = Timer.set(0, false, getP, 1);
+  // if we have records before the system time, this is a current day run - clean up
+  const now = new Date();
+  const recs = Math.ceil((now.getTime() - anch) / CONF.c.i);
+  if (recs > 0) {
+    cull(recs);
+    if (now.getHours() >= 15) timh = Timer.set(0, false, getP, 1);
   }
-
-  if (!prc.length) anch = 0;
 
   console.log("Calculation done, runtime:", Math.floor(Date.now() - st), "ms");
 }
@@ -209,6 +211,8 @@ function chck() {
   if (!actv) return;
   const now = Math.floor(Date.now());
   const time = new Date(now - (now % CONF.c.i));
+  const recs = (time.getTime() - anch) / CONF.c.i;
+  if (recs) cull(recs); // remove outdated records (could happen with very unlucky timing)
   const q = []; // queue for switch commands
   if (time.getTime() === anch) {
     const evnt = {};
@@ -358,7 +362,7 @@ let prc = [];
 let anch = 0;
 let prcm = null;
 let timh = undefined; // timer handle
-const roff = Math.ceil(Math.random() * 300000); // random offset in ms for timer start after 15:00
+const roff = Math.floor(5000 + Math.random() * 600000); // random offset for timer start after 15:00
 
 let actv = false; // true if we have a valid configuration
 CONF.c = JSON.parse(Script.storage.getItem("c")); // get config from storage

@@ -11,6 +11,13 @@ function bdat(d, offs) {
     t: strt.getTime()
   };
 }
+function cull(recs) {
+  prc.splice(0, recs);
+  CONF.w.forEach(function (swch, idx) {
+    if (swch.length) on[idx] = on[idx].slice(recs);
+  });
+  prc.length ? anch += CONF.c.i * recs : anch = 0;
+}
 function next() {
   const info = Timer.getInfo(timh);
   if (info === undefined) return 0;
@@ -29,9 +36,12 @@ function getP(offs) {
   const url = "https://api.energy-charts.info/price?bzn=" + CONF.c.b + "&start=" + d.s;
   Shelly.call("http.get", {
     url: url
-  }, prcP, d.t);
+  }, prcP, {
+    strt: d.t,
+    offs: offs
+  });
 }
-function prcP(res, errc, errm, strt) {
+function prcP(res, errc, errm, args) {
   const st = Date.now();
   let fbm = false;
   let prcs = [];
@@ -58,8 +68,8 @@ function prcP(res, errc, errm, strt) {
     }
   }
   if (err) {
-    if (strt > Date.now() + 1800000) {
-      timh = Timer.set(1200000, false, getP);
+    if (args.strt > Date.now() + 1800000) {
+      timh = Timer.set(1200000, false, getP, args.offs);
       console.log(err, "Trying again at", next());
       return;
     }
@@ -68,7 +78,7 @@ function prcP(res, errc, errm, strt) {
     for (const p of [75.6, 69.8, 67.3, 65.3, 66.3, 73.3, 89.7, 101.6, 97.4, 82.1, 68.7, 60, 53.5, 50.2, 52.8, 63.8, 78.5, 97.5, 111.6, 121, 115.8, 100.2, 90.1, 79.7]) for (let i = 0; i < mult; i++) prcs.push(p);
   }
   let srtd = [];
-  for (let i = 0, dt = strt; i < prcs.length; i++, dt += CONF.c.i) {
+  for (let i = 0, dt = args.strt; i < prcs.length; i++, dt += CONF.c.i) {
     const p = prcm(new Date(dt), prcs[i] / 10);
     prcs[i] = p;
     let lo = 0;
@@ -79,24 +89,19 @@ function prcP(res, errc, errm, strt) {
     }
     srtd.splice(lo, 0, i);
   }
-  if (anch === 0) anch = strt;
+  if (anch === 0) anch = args.strt;
   CONF.w.forEach(function (swch, idx) {
     if (swch.length) on[idx] += clcw(prcs, srtd, swch);
   });
   srtd = null;
   for (const p of prcs) prc.push(fbm ? "NaN" : Math.round(p * 100));
   prcs = null;
-  if (anch < Date.now()) {
-    while (anch < Date.now()) {
-      prc.splice(0, 1);
-      CONF.w.forEach(function (swch, idx) {
-        if (swch.length) on[idx] = on[idx].slice(1);
-      });
-      anch += CONF.c.i;
-    }
-    if (new Date().getHours() >= 15) timh = Timer.set(0, false, getP, 1);
+  const now = new Date();
+  const recs = Math.ceil((now.getTime() - anch) / CONF.c.i);
+  if (recs > 0) {
+    cull(recs);
+    if (now.getHours() >= 15) timh = Timer.set(0, false, getP, 1);
   }
-  if (!prc.length) anch = 0;
   console.log("Calculation done, runtime:", Math.floor(Date.now() - st), "ms");
 }
 function clcw(prcs, srtd, wins) {
@@ -150,6 +155,8 @@ function chck() {
   if (!actv) return;
   const now = Math.floor(Date.now());
   const time = new Date(now - now % CONF.c.i);
+  const recs = (time.getTime() - anch) / CONF.c.i;
+  if (recs) cull(recs);
   const q = [];
   if (time.getTime() === anch) {
     const evnt = {};
@@ -276,7 +283,7 @@ let prc = [];
 let anch = 0;
 let prcm = null;
 let timh = undefined;
-const roff = Math.ceil(Math.random() * 300000);
+const roff = Math.floor(5000 + Math.random() * 600000);
 let actv = false;
 CONF.c = JSON.parse(Script.storage.getItem("c"));
 if (CONF.c !== null) {
