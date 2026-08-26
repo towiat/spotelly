@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.3 (2026-08-26)
+
+This release changes the startup behavior of the script. Due to popular demand, the script now
+calculates the switch times for the current day immediately when the configuration is submitted or
+the script is started with a stored configuration. Notes:
+
+- Once the calculation for the current day is completed, all records that lie before the system
+  time are removed (since it does not make sense to show outdated data on the timetable). So while
+  the calculation does consider all prices of the day, you will only see a fraction of the results
+  on the timetable.
+- If the initial calculation takes place after 15:00, the script will also calculate the following
+  day immediately.
+- If the initial calculation takes place before 15:00, the following day will (as usual) be
+  calculated shortly after 15:00.
+
 ## 4.2 (2026-05-25)
 
 This release adds a new feature that makes it possible to attach your own code to the script's

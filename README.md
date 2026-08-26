@@ -62,7 +62,7 @@ Follow these steps for the installation:
 1. Click on the `Create Script` button.
 1. Copy the COMPLETE source code from [this link](./dist/final.js) into the script window.
 1. (Optional): Enter a script name in the corresponding field.
-1. Click the `Save` and `Start`. The script is now running.
+1. Click `Save` and `Start`. The script is now running.
 1. Go back to the `Scripts` tab and make sure that the text below the script name says
    `Running`.<br>(Also take note of the script number that the Shelly has automatically
    assigned to the script. You will use this number to review information in your browser.)
@@ -74,12 +74,9 @@ Follow these steps for the installation:
 
 ## Configuration
 
-After the installation is complete, the script will be idle until the configuration has been
-completed and submitted. It is generally advisable to enter the configuration after 15:00 when the
-prices for the next day are available and the calculation results can be reviewed immediately.
-
-After opening `http://<shelly_ip>/script/<script_id>/config` in the browser, you will see the
-following configuration screen:
+The script will be idle until you have completed and submitted the configuration. To do this, open
+`http://<shelly_ip>/script/<script_id>/config` in the browser which will show the configuration
+screen:
 
 <p align="center">
   <img src="./images/config.png"/>
@@ -202,12 +199,17 @@ configurations:
 ## Submitting the Configuration
 
 Once you are done with your setup, click the submit button (the button will be disabled if you do
-not have at least one time window defined). What happens when you submit depends on the time when
-you do it:
+not have at least one time window defined). The script will now calculate the switch times for the
+current day. The process works as follows:
 
-- If you submit the configuration before 15:00, the script will schedule the next update for shortly
-  after 15:00.
-- If you submit the configuration after 15:00, the script will run the calculation immediately.
+- Once the calculation for the current day is completed, all records that lie before the system
+  time are removed (since it does not make sense to show outdated data on the timetable). So while
+  the calculation does consider all prices of the day, you will only see a fraction of the results
+  on the timetable.
+- If the initial calculation takes place after 15:00, the script will also calculate the following
+  day immediately.
+- If the initial calculation takes place before 15:00, the following day will (as usual) be
+  calculated shortly after 15:00.
 
 The calculation results can be reviewed and modified in the timetable view which can be opened
 in the browser with the URL `http://<shelly_ip>/script/<script_id>/spotelly`.
