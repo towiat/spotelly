@@ -156,7 +156,7 @@ function chck() {
   const now = Math.floor(Date.now());
   const time = new Date(now - now % CONF.c.i);
   const recs = (time.getTime() - anch) / CONF.c.i;
-  if (recs) cull(recs);
+  if (recs > 0) cull(recs);
   const q = [];
   if (time.getTime() === anch) {
     const evnt = {};

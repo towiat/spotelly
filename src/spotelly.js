@@ -24,7 +24,7 @@ function bdat(d, offs) {
   };
 }
 
-// Remove all records before the specified datetime
+// Remove the first n recs from the internal tables
 function cull(recs) {
   prc.splice(0, recs);
   CONF.w.forEach(function (swch, idx) {
@@ -212,7 +212,7 @@ function chck() {
   const now = Math.floor(Date.now());
   const time = new Date(now - (now % CONF.c.i));
   const recs = (time.getTime() - anch) / CONF.c.i;
-  if (recs) cull(recs); // remove outdated records (could happen with very unlucky timing)
+  if (recs > 0) cull(recs); // probably not needed, but better safe than sorry...
   const q = []; // queue for switch commands
   if (time.getTime() === anch) {
     const evnt = {};
