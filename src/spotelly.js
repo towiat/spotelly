@@ -78,8 +78,9 @@ function prcP(res, errc, errm, args) {
   }
 
   if (err) {
-    if (args.strt > Date.now() + 1800000) {
-      // retry only if day starts at least 30 minutes in the future
+    const d = new Date();
+    if (d.getHours() < 23 || d.getMinutes() < 30) {
+      // retry only until 23:30
       timh = Timer.set(1200000, false, getP, args.offs);
       console.log(err, "Trying again at", next());
       return;
