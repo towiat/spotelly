@@ -94,12 +94,23 @@ function prcP(res, errc, errm, args) {
 
     // no prices retrieved - do the fallback
     fbm = true;
+    // we need to figure out how many hours the day has...
+    let hrs = 24; // probably 24...
+    const date = new Date(args.strt);
+    if (date.getDay() === 0 && date.getDate() > 24) {
+      if (date.getMonth() === 2) hrs = 23; // last Sunday in March - start of Daylight Saving Time
+      if (date.getMonth() === 9) hrs = 25; // last Sunday in October - end of Daylight Saving Time
+    }
     const mult = 3600000 / CONF.c.i;
+    let c = 0;
+    // this array has 25 price entries
     for (const p of [
       75.6, 69.8, 67.3, 65.3, 66.3, 73.3, 89.7, 101.6, 97.4, 82.1, 68.7, 60, 53.5, 50.2, 52.8, 63.8,
-      78.5, 97.5, 111.6, 121, 115.8, 100.2, 90.1, 79.7,
-    ])
+      78.5, 97.5, 111.6, 121, 115.8, 100.2, 90.1, 79.7, 79.7,
+    ]) {
       for (let i = 0; i < mult; i++) prcs.push(p);
+      if (++c >= hrs) break;
+    }
   }
 
   let srtd = []; // indices of prices in ascending order
