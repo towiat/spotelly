@@ -2,6 +2,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.js",
+    "predeploy": "node build.js",
+    "deploy": "node deploy.js",
     "dev": "node devserver.js"
   },
   "devDependencies": {
