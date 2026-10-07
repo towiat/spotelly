@@ -170,8 +170,10 @@ function chck() {
   const q = [];
   if (time.getTime() === anch) {
     const evnt = {};
-    evnt.current_price = Number(prc.splice(0, 1)) / 100;
-    evnt.next_price = prc[0] ? Number(prc[0]) / 100 : NaN;
+    const cp = prc.splice(0, 1)[0];
+    const np = prc[0];
+    evnt.current_price = cp !== "NaN" ? Number(cp) / 100 : NaN;
+    evnt.next_price = np !== "NaN" ? Number(np) / 100 : NaN;
     CONF.w.forEach(function (swch, idx) {
       if (!swch.length) return;
       const o = on[idx][0] === "1";
