@@ -2,13 +2,10 @@ function upds(str, idx, val) {
   return str.slice(0, idx) + val + str.slice(idx + val.length);
 }
 function bdat(d, offs) {
-  const strt = new Date(d.getFullYear(), d.getMonth(), d.getDate() + offs);
-  const year = strt.getFullYear().toString();
-  const month = (strt.getMonth() + 1).toString();
-  const day = strt.getDate().toString();
+  const s = new Date(d.getFullYear(), d.getMonth(), d.getDate() + offs);
   return {
-    s: [year, "-", month.length === 1 ? "0" + month : month, "-", day.length === 1 ? "0" + day : day].join(""),
-    t: strt.getTime()
+    s: [s.getFullYear(), ("0" + (s.getMonth() + 1)).slice(-2), ("0" + s.getDate()).slice(-2)].join("-"),
+    t: s.getTime()
   };
 }
 function cull(recs) {
