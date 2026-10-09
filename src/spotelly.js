@@ -159,7 +159,7 @@ function clcw(prcs, srtd, wins) {
     // window end index - may be too high if clock is changed for daylight saving time
     const weix = Math.min(win[1], prcs.length);
     // duration - make sure that it is not longer than the time window
-    const dur = Math.min(win[3], weix - wsix);
+    let dur = Math.min(win[3], weix - wsix);
     // type - are we looking for high prices instead of low ones?
     const high = Boolean(win[4]);
     // convert price limit string to number; if empty, use negative/positive infinity instead
@@ -187,23 +187,19 @@ function clcw(prcs, srtd, wins) {
       }
     } else if (high) {
       // non-block mode, highest prices
-      let c = 0;
       for (let i = srtd.length - 1; i >= 0; i--) {
-        if (c === dur) break;
         const idx = srtd[i];
         if (idx >= wsix && idx < weix) {
           if (prcs[idx] >= lim) ons = upds(ons, idx, "1");
-          c++;
+          if (--dur === 0) break;
         }
       }
     } else {
       // non-block mode, lowest prices
-      let c = 0;
       for (const i of srtd) {
-        if (c === dur) break;
         if (i >= wsix && i < weix) {
           if (prcs[i] <= lim) ons = upds(ons, i, "1");
-          c++;
+          if (--dur === 0) break;
         }
       }
     }

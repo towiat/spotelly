@@ -117,7 +117,7 @@ function clcw(prcs, srtd, wins) {
   for (const win of wins) {
     const wsix = win[0];
     const weix = Math.min(win[1], prcs.length);
-    const dur = Math.min(win[3], weix - wsix);
+    let dur = Math.min(win[3], weix - wsix);
     const high = Boolean(win[4]);
     const lim = win[5] ? Number(win[5]) : high ? -Infinity : Infinity;
     ons = upds(ons, wsix, zros.slice(wsix, weix));
@@ -137,22 +137,18 @@ function clcw(prcs, srtd, wins) {
         if (high ? prcs[i] >= lim : prcs[i] <= lim) ons = upds(ons, i, "1");
       }
     } else if (high) {
-      let c = 0;
       for (let i = srtd.length - 1; i >= 0; i--) {
-        if (c === dur) break;
         const idx = srtd[i];
         if (idx >= wsix && idx < weix) {
           if (prcs[idx] >= lim) ons = upds(ons, idx, "1");
-          c++;
+          if (--dur === 0) break;
         }
       }
     } else {
-      let c = 0;
       for (const i of srtd) {
-        if (c === dur) break;
         if (i >= wsix && i < weix) {
           if (prcs[i] <= lim) ons = upds(ons, i, "1");
-          c++;
+          if (--dur === 0) break;
         }
       }
     }
