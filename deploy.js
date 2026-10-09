@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const SOURCE_FILE = "./dist/final.js";
-const CHUNK_SIZE = 1024;
+const CHUNK_SIZE = 2048;
 const SCRIPT_NOT_FOUND = -105;
 
 const [host, idArg, startArg] = process.argv.slice(2);

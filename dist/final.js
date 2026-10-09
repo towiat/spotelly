@@ -8,7 +8,9 @@ function bdat(d, offs) {
     t: s.getTime()
   };
 }
-function cull(recs) {
+function cull(ts) {
+  const recs = Math.floor((anch - ts) / -CONF.c.i);
+  if (recs <= 0) return;
   prc.splice(0, recs);
   CONF.w.forEach(function (swch, idx) {
     if (swch.length) on[idx] = on[idx].slice(recs);
@@ -104,12 +106,12 @@ function prcP(res, errc, errm, args) {
   srtd = null;
   for (const p of prcs) prc.push(fbm ? "NaN" : Math.round(p * 100));
   prcs = null;
-  const now = new Date();
-  const recs = Math.ceil((now.getTime() - anch) / CONF.c.i);
-  if (recs > 0) {
-    cull(recs);
-    if (now.getHours() >= 15) timh = Timer.set(0, false, getP, 1);
-  }
+  const now = Math.floor(Date.now());
+  if (args.strt < now && new Date().getHours() >= 15) timh = Timer.set(0, false, getP, 1);
+  let ts = now + CONF.c.i + 1000;
+  ts = ts - ts % CONF.c.i;
+  cull(ts);
+  Timer.set(ts - Date.now(), false, tick, ts);
   console.log("Calculation done, runtime:", Math.floor(Date.now() - st), "ms");
 }
 function clcw(prcs, srtd, wins) {
@@ -155,14 +157,10 @@ function clcw(prcs, srtd, wins) {
   }
   return ons;
 }
-function chck() {
-  if (!actv) return;
-  const now = Math.floor(Date.now());
-  const time = new Date(now - now % CONF.c.i);
-  const recs = (time.getTime() - anch) / CONF.c.i;
-  if (recs > 0) cull(recs);
+function tick(ts) {
+  cull(ts);
   const q = [];
-  if (time.getTime() === anch) {
+  if (ts === anch) {
     const evnt = {};
     const cp = prc.splice(0, 1)[0];
     const np = prc[0];
@@ -182,27 +180,15 @@ function chck() {
     set(q);
     anch = prc.length ? anch + CONF.c.i : 0;
   }
+  const nxts = ts + CONF.c.i;
+  Timer.set(nxts - Date.now(), false, tick, nxts);
+  const time = new Date(ts);
   if (time.getHours() === 15 && time.getMinutes() === 0) timh = Timer.set(roff, false, getP, 1);
 }
 function htep(req, res, html) {
   res.headers = [["Content-Type", "text/html"], ["Content-Encoding", "gzip"]];
   res.body = html;
   res.send();
-}
-function init() {
-  CONF.c = {
-    b: "",
-    i: 3_600_000,
-    s: []
-  };
-  CONF.w = [];
-  CONF.p = "  return spotPrice;";
-  for (let i = 0; i < 10; i++) {
-    if (!Shelly.getComponentStatus("switch", i)) break;
-    CONF.w.push([]);
-    CONF.c.s.push(false);
-  }
-  updc();
 }
 function updc() {
   prc = [];
@@ -211,28 +197,6 @@ function updc() {
   anch = 0;
   prcm = new Function("datetime", "spotPrice", CONF.p);
   Timer.clear(timh);
-  Shelly.call("Schedule.List", {}, function (res) {
-    const call = {
-      method: "Script.Eval",
-      params: {
-        id: Script.id,
-        code: "chck()"
-      }
-    };
-    const schd = {
-      enable: true,
-      timespec: CONF.c.i === 3600000 ? "0 0 * * * *" : "0 */15 * * * *",
-      calls: [call]
-    };
-    for (const job of res.jobs) {
-      const cll = job.calls[0];
-      if (cll.method.toLowerCase() !== "script.eval" || cll.params.id !== Script.id) continue;
-      if (job.timespec === schd.timespec && cll.params.code === call.params.code) return;
-      schd.id = job.id;
-      break;
-    }
-    Shelly.call("id" in schd ? "Schedule.Update" : "Schedule.Create", schd);
-  });
 }
 function stup() {
   if (Shelly.getComponentStatus("sys").unixtime === null) {
@@ -258,7 +222,7 @@ HTTPServer.registerEndpoint("data", function (req, res) {
     p: prc,
     o: on,
     r: roff,
-    v: actv,
+    v: true,
     z: Shelly.getComponentConfig("sys").location.tz
   });
   res.send();
@@ -270,7 +234,6 @@ HTTPServer.registerEndpoint("confdata", function (req, res) {
     Script.storage.setItem("w", JSON.stringify(CONF.w));
     if (!CONF.p) CONF.p = "  return spotPrice;";
     Script.storage.setItem("p", JSON.stringify(CONF.p));
-    actv = true;
     updc();
     stup();
   }
@@ -290,14 +253,24 @@ let anch = 0;
 let prcm = null;
 let timh = undefined;
 const roff = Math.floor(5000 + Math.random() * 600000);
-let actv = false;
 CONF.c = JSON.parse(Script.storage.getItem("c"));
 if (CONF.c !== null) {
   CONF.w = JSON.parse(Script.storage.getItem("w"));
   CONF.p = JSON.parse(Script.storage.getItem("p"));
-  actv = true;
   updc();
   stup();
 } else {
-  init();
+  CONF.c = {
+    b: "",
+    i: 3_600_000,
+    s: []
+  };
+  CONF.w = [];
+  CONF.p = "  return spotPrice;";
+  for (let i = 0; i < 10; i++) {
+    if (!Shelly.getComponentStatus("switch", i)) break;
+    CONF.w.push([]);
+    CONF.c.s.push(false);
+  }
+  updc();
 }
