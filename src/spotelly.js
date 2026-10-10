@@ -50,6 +50,8 @@ function getP(offs) {
 }
 
 function prcP(res, errc, errm, args) {
+  // skip if day is already in the table
+  if (anch && anch + prc.length * CONF.c.i > args.strt) return;
   const st = Date.now();
   let fbm = false;
   let prcs = [];
