@@ -1,9 +1,11 @@
 import js from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import html from "eslint-plugin-html";
+import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 
-export default [
+export default defineConfig([
+  globalIgnores(["dist/*.js"]),
   js.configs.recommended,
   {
     rules: {
@@ -16,7 +18,7 @@ export default [
     },
   },
   {
-    files: ["dist/*.js", "src/*.js"],
+    files: ["src/*.js"],
     rules: {
       "func-names": ["error", "never"],
       "func-style": ["error", "declaration"],
@@ -57,4 +59,4 @@ export default [
     },
   },
   eslintConfigPrettier,
-];
+]);

@@ -6,7 +6,8 @@ Steps performed:
 
 - To conserve memory on the Shelly, compress the html files and replace the html placeholders
   in spotelly.js with the BASE64-encoded compressed output
-- To reduce the physical script size, remove all comments and empty lines from spotelly.js
+- Minify the spotelly.js script code for reduced physical size and memory usage and slightly
+  better performance
 
 This script must be executed after each change to one of the files in the src directory and can
 be started with 'npm run build'.
@@ -14,8 +15,9 @@ be started with 'npm run build'.
 
 import { transformSync } from "@babel/core";
 import { gzipAsync } from "@gfx/zopfli";
-import { minify } from "html-minifier-terser";
+import { minify as minifyHTML } from "html-minifier-terser";
 import fs from "node:fs";
+import { minify as minifyJS } from "terser";
 
 async function compress(htmlfile) {
   console.log(`Processing ${htmlfile}:`);
@@ -23,7 +25,7 @@ async function compress(htmlfile) {
   const html = fs.readFileSync(htmlfile, "utf8");
   console.log("HTML:", html.length, "bytes");
 
-  const minified = await minify(html, {
+  const minified = await minifyHTML(html, {
     collapseInlineTagWhitespace: true,
     collapseWhitespace: true,
     minifyCSS: true,
@@ -61,12 +63,20 @@ async function main(sourceJS, targetJS) {
     source = source.replace(match[1], await compress(`./src/${match[2]}`));
   }
 
-  // remove comments from source to reduce physical script size
-  source = transformSync(source, { comments: false }).code;
+  // minify the main script source
+  source = await minifyJS(source, { mangle: { toplevel: true } });
+
+  // send the source through babel to add logical line breaks for better error reporting
+  source = transformSync(source.code).code;
 
   // write modified source to dist folder
   fs.writeFileSync(targetJS, source);
   console.log("Modified JS has been written to", targetJS);
 }
 
-main("./src/spotelly.js", "./dist/final.js");
+try {
+  await main("./src/spotelly.js", "./dist/final.js");
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}
