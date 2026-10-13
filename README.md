@@ -309,6 +309,26 @@ Now, you can make your changes by repeating the following steps as often as you 
 See the source code in the build script `build.js` for a detailed description of the compression
 and merge process.
 
+### The script displays `NaN` instead of prices and all the colors are gone. What happened?
+
+This occurs when the script enters fallback mode because it cannot retrieve prices for the following
+day. This can happen due to persistent network issues, internet connectivity problems, or API
+server downtime.
+
+The fallback logic works as follows:
+
+- The script first attempts to fetch prices shortly after 15:00.
+- If the attempt fails, the script retries every 20 minutes.
+- If all attempts fail by 23:30, fallback mode is activated.
+- In fallback mode, the script uses hard-coded statistical prices to calculate switch times based
+  on an "average" day. You can manually adjust these results in the timetable view.
+- The statistical prices are replaced with `NaN` and color coding is removed to indicate that the
+  real prices were unavailable.
+
+The script will start the above process again on the following day. If the underlying cause is no
+longer there, it will automatically resume normal operation (although the color-coding will only
+reappear after the last `NaN` value is gone from the timetable).
+
 ### I have questions or want to give feedback about the script. Where can I do that?
 
 If you cannot or do not want to open an issue in this repository, you can also visit the Shelly
