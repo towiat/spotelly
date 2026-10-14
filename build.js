@@ -55,22 +55,38 @@ async function compress(htmlfile) {
   return encoded;
 }
 
-async function main(sourceJS, targetJS) {
-  let source = fs.readFileSync(sourceJS, "utf8");
+// name generator with a fixed sequence (a…_, aa, ba…_9, aaa…) for terser's mangler
+const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789";
+const nthIdentifier = {
+  get(n) {
+    let name = "";
+    // first character must not be a digit
+    for (let base = 53; ; base = 63) {
+      name += chars[n % base];
+      n = Math.floor(n / base) - 1;
+      if (n < 0) return name;
+    }
+  },
+};
 
-  // replace html placeholders in spotelly.js with the compressed versions
-  for (const match of source.matchAll(/({{ (.*\.html) }})/g)) {
-    source = source.replace(match[1], await compress(`./src/${match[2]}`));
+async function main(sourceJS, targetJS) {
+  const source = fs.readFileSync(sourceJS, "utf8");
+
+  // minify the main script
+  let { code } = await minifyJS(source, {
+    mangle: { toplevel: true, nth_identifier: nthIdentifier },
+  });
+
+  // replace html placeholders with the compressed versions
+  for (const [placeholder, file] of code.matchAll(/{{ (.*?\.html) }}/g)) {
+    code = code.replace(placeholder, await compress(`./src/${file}`));
   }
 
-  // minify the main script source
-  source = await minifyJS(source, { mangle: { toplevel: true } });
-
   // send the source through babel to add logical line breaks for better error reporting
-  source = transformSync(source.code).code;
+  code = transformSync(code).code;
 
   // write modified source to dist folder
-  fs.writeFileSync(targetJS, source);
+  fs.writeFileSync(targetJS, code);
   console.log("Modified JS has been written to", targetJS);
 }
 
