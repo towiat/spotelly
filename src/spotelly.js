@@ -51,8 +51,17 @@ function getP(offs) {
 
 function prcP(res, errc, errm, args) {
   // skip if day is already in the table
-  if (anch && anch + prc.length * CONF.c.i > args.strt) return;
   const st = Date.now();
+  if (anch && anch + prc.length * CONF.c.i > args.strt) return;
+
+  // if start is in the past, clear data (in case it was filled by a belated callback)
+  if (st < args.strt) {
+    prc = [];
+    on = [];
+    for (const _ of CONF.w) on.push(""); // create one string for each switch on the device
+    anch = 0;
+  }
+
   let fbm = false;
   let prcs = [];
 
@@ -250,15 +259,6 @@ function htep(req, res, html) {
   res.send();
 }
 
-function updc() {
-  prc = [];
-  on = [];
-  for (const _ of CONF.w) on.push(""); // create one string for each switch on the device
-  anch = 0;
-  prcm = new Function("datetime", "spotPrice", CONF.p);
-  Timer.clear(timh); // make sure that no timer is active (important in config update scenario)
-}
-
 function stup() {
   if (Shelly.getComponentStatus("sys").unixtime === null) {
     console.log("Time not synchronized, waiting one second...");
@@ -301,7 +301,7 @@ HTTPServer.registerEndpoint("confdata", function (req, res) {
     Script.storage.setItem("w", JSON.stringify(CONF.w));
     if (!CONF.p) CONF.p = "  return spotPrice;";
     Script.storage.setItem("p", JSON.stringify(CONF.p));
-    updc();
+    prcm = new Function("datetime", "spotPrice", CONF.p);
     stup();
   }
   res.headers = [["Content-Type", "application/json"]];
@@ -313,26 +313,13 @@ HTTPServer.registerEndpoint("confdata", function (req, res) {
 const zros =
   "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
-let CONF = { c: null, w: null, p: null };
-let on = [];
-let prc = [];
-let anch = 0;
-let prcm = null;
-let timh = undefined; // timer handle
-const roff = Math.floor(5000 + Math.random() * 600000); // random offset for timer start after 15:00
-
-CONF.c = JSON.parse(Script.storage.getItem("c")); // get config from storage
-if (CONF.c !== null) {
-  CONF.w = JSON.parse(Script.storage.getItem("w"));
-  CONF.p = JSON.parse(Script.storage.getItem("p"));
-  updc(); // Update state variables and schedule
-  stup(); // start up the script
-} else {
-  CONF.c = {
+let CONF = {
+  // main options
+  c: {
     b: "", // bidding zone
-    i: 3_600_000, // 3600000 = 60-minute mode, 900000 = 15-minute mode
+    i: 3600000, // 3600000 = 60-minute mode, 900000 = 15-minute mode
     s: [], // invert switch array (one boolean for each switch)
-  };
+  },
 
   // array of arrays for time windows
   // there is one array for each switch
@@ -344,14 +331,30 @@ if (CONF.c !== null) {
   // index 3: duration (1..24 in 60-minute mode, 1..96 in 15-minute mode)
   // index 4: price selector (0 = lowest, 1 = highest)
   // index 5: price limit (string; empty = no limit, numeric value = limit)
-  CONF.w = [];
+  w: [],
 
-  CONF.p = "  return spotPrice;"; // price modifier code
+  // default code for price modifier
+  p: "  return spotPrice",
+};
 
-  for (let i = 0; i < 10; i++) {
-    if (!Shelly.getComponentStatus("switch", i)) break;
-    CONF.w.push([]); // add one empty array for each switch
-    CONF.c.s.push(false); // add one false for each switch
-  }
-  updc();
+// count switch instances on the device and add corresponding data
+for (let i = 0; i < 10; i++) {
+  if (!Shelly.getComponentStatus("switch", i)) break;
+  CONF.w.push([]); // add one empty time window array for each switch
+  CONF.c.s.push(false); // add one false "inverse switch" indicator for each switch
+}
+
+let on = [];
+let prc = [];
+let anch = 0;
+let prcm = null;
+let timh = undefined; // timer handle
+const roff = Math.floor(5000 + Math.random() * 600000); // random offset for timer start after 15:00
+
+CONF.c = JSON.parse(Script.storage.getItem("c")); // get config from storage
+if (CONF.c !== null) {
+  CONF.w = JSON.parse(Script.storage.getItem("w"));
+  CONF.p = JSON.parse(Script.storage.getItem("p"));
+  prcm = new Function("datetime", "spotPrice", CONF.p);
+  stup(); // start up the script
 }
