@@ -26,11 +26,11 @@
             <th>On</th>
           </tr>
         </thead>
-        <tbody id="b" />
+        <tbody id="b"></tbody>
       </table>
     </main>
 
-    <footer class="bg-primary fixed-bottom" id="f" />
+    <footer class="bg-primary fixed-bottom" id="f"></footer>
     <script>
       let data = null;
       let switchID = Number(new URLSearchParams(window.location.search).get("id")) || 0;
@@ -60,36 +60,33 @@
         }
         switchDropdown.innerHTML = "";
         for (const j in data.o) if (data.o[j]) switchDropdown.innerHTML += `<option>${j}</option>`;
-        switchDropdown.value = switchID || 0;
+        if (!data.o[switchID]) switchID = Math.max(0, data.o.findIndex(Boolean));
+        switchDropdown.value = switchID;
         let count = 0;
         let sum = 0;
-        let prices = null;
+        let timestamp = data.a;
+        const prices = data.p.map(x => Number(x) / 100);
+        const max = Math.max(...prices);
+        const min = Math.min(...prices);
+        let table = "";
 
-        if (data.a) {
-          body.innerHTML = "";
-          let timestamp = data.a;
-          if (!prices) prices = data.p.map(x => Number(x) / 100);
-          const max = Math.max(...prices);
-          const min = Math.min(...prices);
+        prices.forEach((price, idx) => {
+          const on = data.o[switchID][idx] === "1";
 
-          prices.forEach((price, idx) => {
-            const on = data.o[switchID][idx] === "1" ? true : false;
+          if (on) {
+            sum += price;
+            count++;
+          }
 
-            if (on) {
-              sum += price;
-              count++;
-            }
-
-            const color = isNaN(max)
+          const color =
+            isNaN(max) || max === min
               ? "0, 0%, 100%"
               : `${(1 - (price - min) / (max - min)) * 120}, 100%, 50%`;
-            const style = `style="color: hsl(${color});"`;
-            body.innerHTML += `<tr id=${timestamp}><td ${style}>${formatDate(timestamp).slice(0, 10)}<td ${style}>${formatDate(timestamp).slice(11, 16)}<td ${style} class=text-end>${price.toFixed(2)} <td><div class=form-switch><input class=form-check-input type=checkbox ${on ? "checked" : ""}></div>`;
-            timestamp += data.i;
-          });
-        } else {
-          body.innerHTML = "<tr><td colspan=4 class=p-5>No data";
-        }
+          const style = `style="color: hsl(${color});"`;
+          table += `<tr id=${timestamp}><td ${style}>${formatDate(timestamp).slice(0, 10)}<td ${style}>${formatDate(timestamp).slice(11, 16)}<td ${style} class=text-end>${price.toFixed(2)} <td><div class=form-switch><input class=form-check-input type=checkbox ${on ? "checked" : ""}></div>`;
+          timestamp += data.i;
+        });
+        body.innerHTML = table || "<tr><td colspan=4 class=p-5>No data";
 
         const now = new Date();
         const next = data.n

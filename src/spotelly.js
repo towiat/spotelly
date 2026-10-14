@@ -51,11 +51,10 @@ function getP(offs) {
 
 function prcP(res, errc, errm, args) {
   const st = Date.now();
-  // if start is in the past, clear data (in case it was filled by a belated callback)
+  // make sure that data is cleared for initial run
   if (args.strt < st) {
-    prc = [];
-    on = [];
-    for (const _ of CONF.w) on.push(""); // create one string for each switch on the device
+    prc.splice(0);
+    for (let i = 0; i < CONF.w.length; i++) on[i] = "";
     anch = 0;
   }
 
@@ -77,13 +76,12 @@ function prcP(res, errc, errm, args) {
     res.body = res.body.substring(pstr, pend);
     prcs = JSON.parse(res.body);
     delete res.body;
-
     // in hour mode, convert 15-minute prices to 60-minute prices
     if (CONF.c.i === 3600000) {
-      for (let i = 0, j = 0; i < 24; i++, j += 4) {
+      for (let i = 0, j = 0; i < prcs.length / 4; i++, j += 4) {
         prcs[i] = (prcs[j] + prcs[j + 1] + prcs[j + 2] + prcs[j + 3]) / 4;
       }
-      prcs.splice(24);
+      prcs.splice(prcs.length / 4);
     }
   }
 
@@ -150,13 +148,14 @@ function prcP(res, errc, errm, args) {
 
   // if this is a current day run and we are after 15:00, calculate the next day
   const now = Math.floor(Date.now());
-  if (args.strt < now && new Date().getHours() >= 15) timh = Timer.set(0, false, getP, 1);
-
-  // schedule the first tick execution
-  let ts = now + CONF.c.i + 1000; // add one second for safety
-  ts = ts - (ts % CONF.c.i); // normalize to the next full hour/quarter hour
-  cull(ts); // remove all records before the tick
-  Timer.set(ts - Date.now(), false, tick, ts); // schedule it
+  if (args.strt < now) {
+    if (new Date().getHours() >= 15) timh = Timer.set(0, false, getP, 1);
+    // schedule the first tick execution
+    let ts = now + CONF.c.i + 1000; // add one second for safety
+    ts = ts - (ts % CONF.c.i); // normalize to the next full hour/quarter hour
+    cull(ts); // remove all records before the tick
+    if (Timer.getInfo(tckh) === undefined) tckh = Timer.set(ts - Date.now(), false, tick, ts);
+  }
 
   console.log("Calculation done, runtime:", Math.floor(Date.now() - st), "ms");
 }
@@ -241,7 +240,7 @@ function tick(ts) {
   }
 
   const nxts = ts + CONF.c.i;
-  Timer.set(nxts - Date.now(), false, tick, nxts);
+  tckh = Timer.set(nxts - Date.now(), false, tick, nxts);
 
   const time = new Date(ts);
   if (time.getHours() === 15 && time.getMinutes() === 0) timh = Timer.set(roff, false, getP, 1);
@@ -275,7 +274,8 @@ HTTPServer.registerEndpoint("data", function (req, res) {
   if (req.method === "POST") {
     const data = JSON.parse(req.body);
     const idx = (data.h - anch) / CONF.c.i;
-    if (idx >= 0 && idx < prc.length) on[data.s] = upds(on[data.s], idx, data.o ? "1" : "0");
+    const s = data.s; // switch ID
+    if (on[s] && idx >= 0 && idx < prc.length) on[s] = upds(on[s], idx, data.o ? "1" : "0");
   }
   res.headers = [["Content-Type", "application/json"]];
   res.body = JSON.stringify({
@@ -285,7 +285,7 @@ HTTPServer.registerEndpoint("data", function (req, res) {
     p: prc,
     o: on,
     r: roff,
-    v: true,
+    v: CONF.c.b !== "",
     z: Shelly.getComponentConfig("sys").location.tz,
   });
   res.send();
@@ -293,6 +293,10 @@ HTTPServer.registerEndpoint("data", function (req, res) {
 
 HTTPServer.registerEndpoint("confdata", function (req, res) {
   if (req.method === "POST") {
+    Timer.clear(timh);
+    timh = undefined;
+    Timer.clear(tckh);
+    tckh = undefined;
     CONF = JSON.parse(req.body);
     Script.storage.setItem("c", JSON.stringify(CONF.c));
     Script.storage.setItem("w", JSON.stringify(CONF.w));
@@ -341,17 +345,21 @@ for (let i = 0; i < 10; i++) {
   CONF.c.s.push(false); // add one false "inverse switch" indicator for each switch
 }
 
-let on = [];
-let prc = [];
+const on = [];
+const prc = [];
 let anch = 0;
 let prcm = null;
-let timh = undefined; // timer handle
+let timh = undefined; // timer handle for price download
+let tckh = undefined; // timer handle for tick function
 const roff = Math.floor(5000 + Math.random() * 600000); // random offset for timer start after 15:00
 
-CONF.c = JSON.parse(Script.storage.getItem("c")); // get config from storage
-if (CONF.c !== null) {
-  CONF.w = JSON.parse(Script.storage.getItem("w"));
-  CONF.p = JSON.parse(Script.storage.getItem("p"));
-  prcm = new Function("datetime", "spotPrice", CONF.p);
-  stup(); // start up the script
+{
+  const c = JSON.parse(Script.storage.getItem("c"));
+  if (c !== null) {
+    CONF.c = c;
+    CONF.w = JSON.parse(Script.storage.getItem("w"));
+    CONF.p = JSON.parse(Script.storage.getItem("p"));
+    prcm = new Function("datetime", "spotPrice", CONF.p);
+    stup(); // start up the script
+  }
 }
