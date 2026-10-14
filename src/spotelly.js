@@ -50,17 +50,17 @@ function getP(offs) {
 }
 
 function prcP(res, errc, errm, args) {
-  // skip if day is already in the table
   const st = Date.now();
-  if (anch && anch + prc.length * CONF.c.i > args.strt) return;
-
   // if start is in the past, clear data (in case it was filled by a belated callback)
-  if (st < args.strt) {
+  if (args.strt < st) {
     prc = [];
     on = [];
     for (const _ of CONF.w) on.push(""); // create one string for each switch on the device
     anch = 0;
   }
+
+  // skip if day is already in the table
+  if (anch && anch + prc.length * CONF.c.i > args.strt) return;
 
   let fbm = false;
   let prcs = [];
@@ -80,13 +80,10 @@ function prcP(res, errc, errm, args) {
 
     // in hour mode, convert 15-minute prices to 60-minute prices
     if (CONF.c.i === 3600000) {
-      const ptmp = [];
-      for (let i = 0; i < prcs.length; i += 4) {
-        let psum = 0;
-        for (let j = i; j < i + 4; j++) psum += prcs[j];
-        ptmp.push(psum / 4);
+      for (let i = 0, j = 0; i < 24; i++, j += 4) {
+        prcs[i] = (prcs[j] + prcs[j + 1] + prcs[j + 2] + prcs[j + 3]) / 4;
       }
-      prcs = ptmp;
+      prcs.splice(24);
     }
   }
 
