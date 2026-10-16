@@ -362,7 +362,7 @@
 
       function callDataEndpoint(postData) {
         fetch(
-          window.location.href.replace("config", "confdata"),
+          location.href.replace("config", "confdata"),
           postData && { method: "POST", body: JSON.stringify(postData) },
         )
           .then(r => r.json())
@@ -373,7 +373,7 @@
           .catch(e => (body.innerHTML = e));
       }
 
-      window.addEventListener("load", () => callDataEndpoint());
+      addEventListener("load", () => callDataEndpoint());
     </script>
   </body>
 </html>
