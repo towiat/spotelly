@@ -170,14 +170,14 @@
             class="form-control text-end"
             name="v"
             pattern="[+\-]?(\d+\.?\d*|\.\d+)"
-            title="Enter a number (e.g. 12, -3.5, 0.25)"
+            title="Number"
           />
         </td>
         <!-- remove button -->
         <td class="text-center align-middle">
           <button
             type="button"
-            class="btn btn-sm btn-outline-danger remove-row-btn"
+            class="btn btn-sm btn-outline-danger rm"
             title="Remove row"
           >
             &times;
@@ -189,16 +189,12 @@
     <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.43.6/src-min/ace.min.js"></script>
     <script>
       const q = (ele, string) => ele.querySelector(string);
-      const disableButton = button => {
-        button.disabled = true;
-        button.classList.toggle("bg-danger", true);
-      };
-      const enableButton = button => {
-        button.disabled = false;
-        button.classList.toggle("bg-danger", false);
+      const setButton = (button, on) => {
+        button.disabled = !on;
+        button.classList.toggle("bg-danger", !on);
       };
 
-      const body = q(document, "body");
+      const body = document.body;
 
       const biddingZone = q(body, "#b");
       const codeAlert = q(body, "#a");
@@ -210,9 +206,7 @@
       const switchCardTemplate = q(body, "#w").content;
       const switchDiv = q(body, "#s");
 
-      const fromSelect = rowTemplate.querySelectorAll("[name=v]")[0];
-      const toSelect = rowTemplate.querySelectorAll("[name=v]")[1];
-      const durationSelect = rowTemplate.querySelectorAll("[name=v]")[3];
+      const [fromSelect, toSelect, , durationSelect] = rowTemplate.querySelectorAll("[name=v]");
 
       const aceOptions = {
         fontSize: "0.9em",
@@ -232,11 +226,10 @@
       const ts = s => `${Math.floor(s / 3600)}:${((s % 3600) / 60).toString().padStart(2, 0)}`;
 
       let conf = null;
-      let firstRun = true;
 
       // remove row and add time window button
       switchDiv.addEventListener("click", e => {
-        if (e.target.matches(".remove-row-btn")) {
+        if (e.target.matches(".rm")) {
           const tr = e.target.closest("tr");
           if (tr) tr.remove();
         } else if (e.target.matches("[name=a]")) {
@@ -298,13 +291,12 @@
 
       // when called for the first time, add a card for each switch; then update UI with config data
       function updateUI() {
-        if (firstRun) {
+        if (!switchDiv.children.length) {
           conf.w.forEach((_, idx) => {
             const switchCard = switchCardTemplate.cloneNode(true);
             q(switchCard, "h5").innerText = `Switch ${idx}`;
             switchDiv.appendChild(switchCard);
           });
-          firstRun = false;
         }
 
         biddingZone.value = conf.c.b;
@@ -325,20 +317,20 @@
         const windowCount = switchDiv.querySelectorAll("[name=x]").length;
         // disable add buttons if we have 30 or more time windows
         switchDiv.querySelectorAll("[name=a]").forEach(button => {
-          if (windowCount >= 30) {
-            disableButton(button);
-            button.innerText = "Time Window Limit (30) reached!";
-          } else {
-            enableButton(button);
-            button.innerText = "Add Time Window";
-          }
+          setButton(button, windowCount < 30);
+          button.innerText = windowCount < 30 ? "Add Time Window" : "Time Window Limit (30) reached!";
         });
         // submit button is only enabled if at least one time window is defined
-        windowCount ? enableButton(submitButton) : disableButton(submitButton);
+        setButton(submitButton, windowCount);
       }
 
       // submit the form
       submitButton.addEventListener("click", () => {
+        // "to" must be later than "from"
+        switchDiv.querySelectorAll("[name=x]").forEach(row => {
+          const [f, t] = row.querySelectorAll("[name=v]");
+          t.setCustomValidity(+t.value > +f.value ? "" : "Must be later than From");
+        });
         if (!form.reportValidity() || !checkCode()) {
           return;
         }
@@ -357,7 +349,7 @@
         conf.w = [...switchDiv.children].map(switchCard =>
           [...switchCard.querySelectorAll("[name=x]")].map(row =>
             [...row.querySelectorAll("[name=v]")].map(
-              (e, idx) => (idx === 5 ? e.value : Number(e.value)), //awkward, but limit must be a string
+              (e, idx) => (idx - 5 ? +e.value : e.value), //awkward, but limit must be a string
             ),
           ),
         );
@@ -369,7 +361,7 @@
       function callDataEndpoint(postData) {
         fetch(
           window.location.href.replace("config", "confdata"),
-          postData ? { method: "POST", body: JSON.stringify(postData) } : { method: "GET" },
+          postData && { method: "POST", body: JSON.stringify(postData) },
         )
           .then(r => r.json())
           .then(r => {
