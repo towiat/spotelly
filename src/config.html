@@ -111,7 +111,7 @@
               <th style="width: 12ch">From</th>
               <th style="width: 12ch">To</th>
               <th style="width: 15ch">Type</th>
-              <th style="width: 10ch">Dur.</th>
+              <th style="width: 14ch">Duration</th>
               <th style="width: 13ch">Prices</th>
               <th style="width: 10ch">Limit</th>
               <th style="width: 5ch"></th>
@@ -175,11 +175,7 @@
         </td>
         <!-- remove button -->
         <td class="text-center align-middle">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-danger rm"
-            title="Remove row"
-          >
+          <button type="button" class="btn btn-sm btn-outline-danger rm" title="Remove row">
             &times;
           </button>
         </td>
@@ -225,6 +221,10 @@
       // build a timestring in the form HH:MM for a given second of the day
       const ts = s => `${Math.floor(s / 3600)}:${((s % 3600) / 60).toString().padStart(2, 0)}`;
 
+      // build a duration string in the form "3h 45m" for a given number of seconds
+      const ds = s =>
+        `${s < 3600 ? "" : ((s / 3600) | 0) + "h "}${s % 3600 ? (s % 3600) / 60 + "m" : ""}`.trim();
+
       let conf = null;
 
       // remove row and add time window button
@@ -251,7 +251,7 @@
         for (let i = 0, j = 0; i < 86400; i += intervalSeconds, j++) {
           fromSelect.add(new Option(ts(i), j));
           toSelect.add(new Option(ts(i + intervalSeconds), j + 1));
-          durationSelect.add(new Option(j + 1));
+          durationSelect.add(new Option(ds(i + intervalSeconds), j + 1));
         }
       }
 
@@ -318,7 +318,8 @@
         // disable add buttons if we have 30 or more time windows
         switchDiv.querySelectorAll("[name=a]").forEach(button => {
           setButton(button, windowCount < 30);
-          button.innerText = windowCount < 30 ? "Add Time Window" : "Time Window Limit (30) reached!";
+          button.innerText =
+            windowCount < 30 ? "Add Time Window" : "Time Window Limit (30) reached!";
         });
         // submit button is only enabled if at least one time window is defined
         setButton(submitButton, windowCount);
@@ -326,10 +327,11 @@
 
       // submit the form
       submitButton.addEventListener("click", () => {
-        // "to" must be later than "from"
+        // "to" must be later than "from" and duration must fit into the time window
         switchDiv.querySelectorAll("[name=x]").forEach(row => {
-          const [f, t] = row.querySelectorAll("[name=v]");
+          const [f, t, , d] = row.querySelectorAll("[name=v]");
           t.setCustomValidity(+t.value > +f.value ? "" : "Must be later than From");
+          d.setCustomValidity(d.value > t.value - f.value ? "Longer than time window" : "");
         });
         if (!form.reportValidity() || !checkCode()) {
           return;
