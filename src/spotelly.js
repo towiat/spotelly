@@ -335,7 +335,7 @@ let CONF = {
   w: [],
 
   // default code for price modifier
-  p: "  return spotPrice",
+  p: "  return spotPrice;",
 };
 
 // count switch instances on the device and add corresponding data

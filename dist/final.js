@@ -172,7 +172,7 @@ let m = {
     s: []
   },
   w: [],
-  p: "  return spotPrice"
+  p: "  return spotPrice;"
 };
 for (let a = 0; a < 10 && Shelly.getComponentStatus("switch", a); a++) m.w.push([]), m.c.s.push(!1);
 const n = [],
