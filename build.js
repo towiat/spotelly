@@ -39,7 +39,6 @@ async function compress(htmlfile) {
     sortAttributes: true,
     sortClassName: true,
   });
-  console.log(minified);
   console.log("Minified:", minified.length, "bytes");
 
   const compressed = await gzipAsync(minified, {

@@ -84,9 +84,7 @@
             <div class="w-100" id="u" style="background: #f0f0f0"></div>
             <div class="w-100" id="p"></div>
             <div class="w-100" id="d" style="background: #f0f0f0"></div>
-            <div class="alert alert-danger text-center d-none" id="a">
-              Length limit (1024) exceeded!
-            </div>
+            <div class="alert alert-danger text-center d-none" id="a"></div>
           </div>
 
           <!-- Switch card container -->
@@ -167,7 +165,13 @@
         </td>
         <!-- price limit -->
         <td>
-          <input type="text" class="form-control text-end" name="v" />
+          <input
+            type="text"
+            class="form-control text-end"
+            name="v"
+            pattern="[+\-]?(\d+\.?\d*|\.\d+)"
+            title="Enter a number (e.g. 12, -3.5, 0.25)"
+          />
         </td>
         <!-- remove button -->
         <td class="text-center align-middle">
@@ -187,17 +191,17 @@
       const q = (ele, string) => ele.querySelector(string);
       const disableButton = button => {
         button.disabled = true;
-        button.classList.add("bg-danger");
+        button.classList.toggle("bg-danger", true);
       };
       const enableButton = button => {
         button.disabled = false;
-        button.classList.remove("bg-danger");
+        button.classList.toggle("bg-danger", false);
       };
 
       const body = q(document, "body");
 
       const biddingZone = q(body, "#b");
-      const codeLengthAlert = q(body, "#a");
+      const codeAlert = q(body, "#a");
       const form = q(body, "form");
       const interval = q(body, "#i");
       const rowTemplate = q(body, "#r").content;
@@ -232,7 +236,6 @@
 
       // remove row and add time window button
       switchDiv.addEventListener("click", e => {
-        if (!e.target) return;
         if (e.target.matches(".remove-row-btn")) {
           const tr = e.target.closest("tr");
           if (tr) tr.remove();
@@ -275,12 +278,23 @@
       // main edit window for the price modifier
       const editor = ace.edit("p", { ...aceOptions, readOnly: false, useWorker: true });
 
-      // Display alert if maximum code length in the editor has been exceeded
-      editor.on("change", () => {
-        editor.getValue().length > 1024
-          ? codeLengthAlert.classList.remove("d-none")
-          : codeLengthAlert.classList.add("d-none");
-      });
+      // show alert if the price modifier has a syntax error or exceeds the storage limit
+      // (1024 bytes for the JSON string stored on the Shelly); returns true if the code is ok
+      function checkCode() {
+        const code = editor.getValue();
+        let msg = "";
+        try {
+          new Function(code);
+        } catch (e) {
+          msg = e.message;
+        }
+        if (new Blob([JSON.stringify(code)]).size > 1024) msg = "Size limit (1024 bytes) exceeded!";
+        codeAlert.innerText = msg;
+        codeAlert.classList.toggle("d-none", !msg);
+        return !msg;
+      }
+
+      editor.on("change", checkCode);
 
       // when called for the first time, add a card for each switch; then update UI with config data
       function updateUI() {
@@ -325,14 +339,14 @@
 
       // submit the form
       submitButton.addEventListener("click", () => {
-        if (!form.reportValidity()) {
+        if (!form.reportValidity() || !checkCode()) {
           return;
         }
 
         submitButton.disabled = true;
-        spinner.classList.remove("d-none");
+        spinner.classList.toggle("d-none", false);
         setTimeout(() => {
-          spinner.classList.add("d-none");
+          spinner.classList.toggle("d-none", true);
           submitButton.disabled = false;
         }, 5000);
 
