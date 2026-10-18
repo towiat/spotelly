@@ -17,6 +17,7 @@
     "globals": "^17.13.0",
     "html-minifier-terser": "^7.2.0",
     "prettier": "^3.9.9",
+    "terser": "^5.51.2",
     "ws": "^8.22.0"
   }
 }
