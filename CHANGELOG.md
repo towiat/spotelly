@@ -1,5 +1,52 @@
 # Changelog
 
+## 4.4 (2026-10-19)
+
+This is a maintenance release that improves the configuration experience, fixes some minor bugs
+and optimizes some technical aspects of the script.
+
+>**UPGRADE NOTICE** <br>
+>
+>Prior to this release, the script used a schedule that executed the calculated switch commands in
+>the defined 15- or 60-minute intervals.
+>
+>With this release, this schedule is no longer needed and its presence will cause the script to crash
+>when it is triggered for the first time. If you upgrade from a previous release, use the following
+>steps to prevent this:
+>
+>1. Stop the script
+>1. In the `Schedules` tab, delete all schedules that contain an action that reads
+>`{"method":"Script.Eval","params":{"id":2,"code":"chck()"}}` or similar.
+>1. Replace the script code with the new version
+>1. Save and start the script
+>
+> This is a one-time operation that will not be needed in future releases.
+
+**Other Changes and Improvements**
+
+- **New: Additional Validations in the Configuration UI**<br>
+  A configuration can no longer be submitted if one of the following conditions is present:
+    - The end time of a time window is less than or equal to the start time
+    - The switch-on duration is longer than the time window
+    - An entry in the limit field is not a number
+    - The code in the price modifier function exceeds the allowed length of 1024 bytes
+    - The code in the price modifier function is not valid JavaScript
+- **Changed: Display of Duration**<br>
+  The duration is now shown as an expressive string in the form `1h` or `3h 45m` and not as a raw
+  number
+- **Fixed: Switch ID Handling in the Timetable UI**<br>
+  Passing a non-existent switch ID in the query string led to crash in the timetable UI. The UI
+  now displays the data of the first valid switch ID instead
+- **Fixed: Fallback Mode and Daylight Saving Time**<br>
+  Fallback mode would have behaved incorrectly if it had triggered exactly on one of the days when
+  Daylight Saving Time starts or ends
+- **Fixed: Prices in Event Info**<br>
+  Prices with a value of `0` or very close to it showed up as `NaN` in the event data block
+- **Changed: Optimizations**<br>
+  The build script now minifies the main script code that is installed on the Shelly. Combined with
+  some other minor optimizations, this results in a slightly smaller memory footprint and a slightly
+  improved performance
+
 ## 4.3 (2026-08-26)
 
 This release changes the startup behavior of the script. Due to popular demand, the script now

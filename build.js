@@ -1,6 +1,6 @@
 /*
 This script merges spotelly.js, timetable.html and config.html into one single file and writes
-the output to ./final/dist.js.
+the output to ./dist/final.js.
 
 Steps performed:
 
